@@ -3,6 +3,10 @@
 # try long videos
 # minimize html/xml
 
+readonly HTML_TEMPLATE_PATH="template.html"
+# if N seconds between subtitles then start new paragraph
+readonly NEW_LINE_AFTER_PAUSE_S=4
+
 # first arg is famous "?v=" query param
 video_id=$1
 
@@ -11,10 +15,9 @@ if [ -z "${video_id}" ]; then
     exit 1
 fi
 
-# TODO: check valid input
-
-HTML_TEMPLATE_PATH="template.html"
 video_url="https://www.youtube.com/watch?v=${video_id}"
+info_file_name="${video_id}.info.json"
+subs_file_name="${video_id}.en.vtt"
 
 function download_video_subtitles {
     ## Given video id downloads subtitles to disk and returns path to the file.
@@ -42,40 +45,39 @@ function download_video_subtitles {
     # attempt download manmade subs or fallback to auto subs
     youtube_dl --write-sub || youtube_dl --write-auto-sub
 
-    # print file name on success
-    if [[ $? == 0 ]]; then
-        echo "${video_id}.en.vtt"
+    if [[ $? != 0 || -z "${subs_file_name}" ]]; then
+        echo "Subtitles for ${video_id} cannot be downloaded."
+        exit $?
     fi
-
-    return $?
-}
-
-function timeline_html_template {
-    echo "
-        <a href=\"${video_url}&t=${start_at_time_sec}\" target=\"${video_id}\">
-            <time>${start_at_time}</time>
-        </a>
-    "
 }
 
 function subtitles_html_template {
-    ## Given timeline when subtitle appears and subtitle text, return html.
+    ## Given seconds into the video, generate timeline and subtitle html.
 
-    local hours=$2 local minutes=$3 local seconds=$4
-    local text=$5
+    local secs=$1
+    local text=$2
 
-    local start_at_time="$(from_integer_to_double_digit ${hours}):$(from_integer_to_double_digit ${minutes}):$(from_integer_to_double_digit ${seconds})"
-    # query param "&t" is in secs
-    local start_at_time_sec="$(($hours * 3600 + $minutes * 60 + $seconds))"
+    # divides total secs to time
+    local hours=$(( $secs / 3600 ))
+    local rem_secs=$(( $secs - 3600 * $hours ))
+    local mins=$(( $rem_secs / 60 ))
+    local rem_secs=$(( $rem_secs - 60 * $mins ))
 
-    echo "<a href=\"${video_url}&t=${start_at_time_sec}\" target=\"${video_id}\">
-    <time>${start_at_time}</time>
-    <p>${text}</p>
-</a>
-"
+    local hh_mm_ss="$(int_to_time ${hours}):$(int_to_time ${mins}):$(int_to_time ${rem_secs})"
+
+    # FIXME: find more SEO targetted way
+    echo "
+        <p>
+            <a href=\"${video_url}&t=${secs}\" target=\"${video_id}\">
+                <time>${hh_mm_ss}</time>
+            </a>
+
+            <span>${text}</span>
+        </p>
+    "
 }
 
-function from_double_digit_to_integer {
+function time_to_int {
     ## Converts double digit number such as hours, minutes, seconds.
 
     local number=$1
@@ -87,7 +89,7 @@ function from_double_digit_to_integer {
     fi
 }
 
-function from_integer_to_double_digit {
+function int_to_time {
     ## Converts integer to double digit number.
 
     local number=$1
@@ -99,26 +101,16 @@ function from_integer_to_double_digit {
     fi
 }
 
-function exit_on_err_with {
-    ## Given message, prints it and dies if last command failed.
-
-    local message=$1
-
-    if [[ $? != 0 ]]; then
-        echo message
-        exit 1
-    fi
-}
-
-sub_file_name=$(download_video_subtitles "${video_id}")
-exit_on_err_with "Subtitles for ${video_id} cannot be downloaded."
+download_video_subtitles
 
 num='[0-9]'
-arrow='\s-->'
+arrow='\s-->\s'
 
 # the html which will be written in a file with subtitles and time stamps
 transcript_html_mut=""
 
+# keeps track of when subs ended (?t=)
+prev_subs_e_secs=0
 # read 3 lines at once, first one has time info, second the subtitle text, third
 # is always empty.
 while read -r timespan; do
@@ -136,19 +128,36 @@ while read -r timespan; do
     fi
 
     # # FIXME: build regex up front
-    if [[ ${timespan} =~ ^($num{2}):($num{2}):($num{2})\.$num{3}$arrow ]]; then
-        hours=$(from_double_digit_to_integer ${BASH_REMATCH[1]})
-        minutes=$(from_double_digit_to_integer ${BASH_REMATCH[2]})
-        seconds=$(from_double_digit_to_integer ${BASH_REMATCH[3]})
+    if [[ ${timespan} =~ ^($num{2}):($num{2}):($num{2})\.$num{3}$arrow($num{2}):($num{2}):($num{2}) ]]; then
+        # when subs start?
+        s_hours=$(time_to_int ${BASH_REMATCH[1]})
+        s_minutes=$(time_to_int ${BASH_REMATCH[2]})
+        s_seconds=$(time_to_int ${BASH_REMATCH[3]})
+        s_secs="$(($s_hours * 3600 + $s_minutes * 60 + $s_seconds))"
 
-        transcript_html_mut+=$(subtitles_html_template ${video_id} ${hours} ${minutes} ${seconds} "${text_mut}")
+        # when subs end?
+        e_hours=$(time_to_int ${BASH_REMATCH[4]})
+        e_minutes=$(time_to_int ${BASH_REMATCH[5]})
+        e_seconds=$(time_to_int ${BASH_REMATCH[6]})
+        e_secs="$(($e_hours * 3600 + $e_minutes * 60 + $e_seconds))"
+
+        transcript_html_mut+=$(subtitles_html_template ${s_secs} "${text_mut}")
+
+        # add new line if speaker made a pause
+        pause_length_s=$(( $s_secs - $prev_subs_e_secs ))
+        if [[ $pause_length_s -ge $NEW_LINE_AFTER_PAUSE_S ]]; then
+            transcript_html_mut+="<br>"
+        fi
+        prev_subs_e_secs=$e_secs
     fi
-done <<< $(tail -n +5 "${sub_file_name}")
+done <<< $(tail -n +5 "${subs_file_name}")
 
 html=$(cat $HTML_TEMPLATE_PATH)
 
 # get info from youtube-dl created json
-info_json=$( jq -c '.' "${video_id}.info.json" )
+info_json=$( jq -c '.' "${info_file_name}" )
+
+# replace "video_$PROP_prop" keys with values from info json
 properties=( id thumbnail webpage_url uploader title channel_url description )
 for prop in "${properties[@]}"
 do
@@ -156,10 +165,14 @@ do
     html=${html//"video_${prop}_prop"/"${prop_value}"}
 done
 
+# build keywords by removing quotes and square brackets from json array
 tags=$( jq -r -c ".tags" <<< $info_json | sed 's/\"//g' )
 categories=$( jq -r -c ".categories" <<< $info_json | sed 's/\"//g' )
 html=${html/video_keywords_prop/"${categories:1:-1},${tags:1:-1}"}
 
+# and finally attach transcript
 html=${html/video_transcript_prop/${transcript_html_mut}}
 
 echo $html > "${video_id}.html"
+
+rm
