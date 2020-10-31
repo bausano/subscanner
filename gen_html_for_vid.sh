@@ -89,8 +89,9 @@ function parse_subtitles_file {
         # TODO: remove all string between [ and ]
 
         # FIXME: bench fastest method at https://linuxhint.com/trim_string_bash/
-        text_mut="${text_mut##*( )}"
-        text_mut="${text_mut%%*( )}"
+        # text_mut="${text_mut##*( )}"
+        # text_mut="${text_mut%%*( )}"
+        text_mut=`echo $text_mut | sed 's/ *$//g'`
 
         if [ -z "${text_mut}" ]; then
             continue
