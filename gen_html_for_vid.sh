@@ -1,26 +1,43 @@
 #!/bin/bash
-# check for youtube-dl jq
-# try long videos
-# minimize html/xml
+
+# Downloads video subtitles from YouTube with youtube-dl and formats them into
+# html. Uses template.html file to replace placeholders and stores the result in
+# another html file.
+
+if ! command -v youtube-dl &> /dev/null
+then
+    echo "youtube-dl is missing\n sudo apt-get install youtube-dl" && exit 1
+fi
+
+if ! command -v jq &> /dev/null
+then
+    echo "jq is missing\n sudo apt-get install jq" && exit 1
+fi
 
 readonly HTML_TEMPLATE_PATH="template.html"
 # if N seconds between subtitles then start new paragraph
 readonly NEW_LINE_AFTER_PAUSE_S=4
+# "11:22:33.938 --> 44:55:66" matches position "nn" in nth group for 6 groups
+readonly D="[[:digit:]]"
+readonly MATCH_TIMESPAN="^($D{2}):($D{2}):($D{2})\.$D{3}\s-->\s($D{2}):($D{2}):($D{2})"
 
 # first arg is famous "?v=" query param
-video_id=$1
+readonly video_id=$1
 
 if [ -z "${video_id}" ]; then
     echo "Video id must be provided. Example: ./gen_html_for_vid MBnnXbOM5S4"
     exit 1
 fi
 
-video_url="https://www.youtube.com/watch?v=${video_id}"
-info_file_name="${video_id}.info.json"
-subs_file_name="${video_id}.en.vtt"
+readonly video_url="https://www.youtube.com/watch?v=${video_id}"
+readonly info_file_name="${video_id}.info.json"
+readonly subs_file_name="${video_id}.en.vtt"
+
+html_mut=$(cat $HTML_TEMPLATE_PATH)
 
 function download_video_subtitles {
     ## Given video id downloads subtitles to disk and returns path to the file.
+    echo "[$(date)] Downloading subs..."
 
     function youtube_dl {
         ## Runs youtube-dl to get subtitles. Can be parametrized to get auto
@@ -42,13 +59,93 @@ function download_video_subtitles {
         return 1
     }
 
-    # attempt download manmade subs or fallback to auto subs
+    # attempt download subs
+    # option to download auto subs is disabled as quality is low
     youtube_dl --write-sub || youtube_dl --write-auto-sub
 
     if [[ $? != 0 || -z "${subs_file_name}" ]]; then
         echo "Subtitles for ${video_id} cannot be downloaded."
         exit $?
     fi
+}
+
+function parse_subtitles_file {
+    ## Loads and parses subs, puts results into html. This function mutates
+    ## parameter "html_mut".
+    echo "[$(date)] Parsing subs file..."
+
+    # keeps track of when subs ended (?t=)
+    local prev_subs_e_secs_mut=0
+
+    # html to replace template's placeholder with
+    local transcript_mut=""
+
+    # read 3 lines at once, first one has time info, second the subtitle text, third
+    # is always empty.
+    while read -r timespan; do
+        read -r text_mut
+        read -r _new_line
+
+        # TODO: remove all string between [ and ]
+
+        # FIXME: bench fastest method at https://linuxhint.com/trim_string_bash/
+        text_mut="${text_mut##*( )}"
+        text_mut="${text_mut%%*( )}"
+
+        if [ -z "${text_mut}" ]; then
+            continue
+        fi
+
+        if [[ ${timespan} =~ $MATCH_TIMESPAN ]]; then
+            # when subs start?
+            s_hours=$(time_to_int ${BASH_REMATCH[1]})
+            s_minutes=$(time_to_int ${BASH_REMATCH[2]})
+            s_seconds=$(time_to_int ${BASH_REMATCH[3]})
+            s_secs="$(($s_hours * 3600 + $s_minutes * 60 + $s_seconds))"
+
+            # when subs end?
+            e_hours=$(time_to_int ${BASH_REMATCH[4]})
+            e_minutes=$(time_to_int ${BASH_REMATCH[5]})
+            e_seconds=$(time_to_int ${BASH_REMATCH[6]})
+            e_secs="$(($e_hours * 3600 + $e_minutes * 60 + $e_seconds))"
+
+            # add new line if speaker made a pause
+            pause_length_s=$(( $s_secs - $prev_subs_e_secs_mut ))
+            if [[ $pause_length_s -ge $NEW_LINE_AFTER_PAUSE_S ]]; then
+                transcript_mut+="<br>"
+            fi
+            prev_subs_e_secs_mut=$e_secs
+
+            transcript_mut+=$(subtitles_html_template ${s_secs} "${text_mut}")
+        fi
+    done <<< $(tail -n +5 "${subs_file_name}")
+
+    # and finally attach transcript to the html
+    html_mut=${html_mut/video_transcript_prop/${transcript_mut}}
+}
+
+function replace_template_placeholders {
+    ## Gets info from metadata file and replaces placeholders in "html_mut".
+    echo "[$(date)] Replacing template placeholders..."
+
+    # get info from youtube-dl created json
+    local info_json=$( jq -c '.' "${info_file_name}" )
+
+    # replace "video_$PROP_prop" keys with values from info json
+    local properties=(
+        id title thumbnail webpage_url
+        uploader channel_url
+    )
+    for prop in "${properties[@]}"
+    do
+        prop_value=$( jq -r -c ".$prop" <<< $info_json )
+        html_mut=${html_mut//"video_${prop}_prop"/"${prop_value}"}
+    done
+
+    # build keywords by removing quotes and square brackets from json array
+    local tags=$( jq -r -c ".tags" <<< $info_json | sed 's/\"//g' )
+    local categories=$( jq -r -c ".categories" <<< $info_json | sed 's/\"//g' )
+    html_mut=${html_mut/video_keywords_prop/"${categories:1:-1},${tags:1:-1}"}
 }
 
 function subtitles_html_template {
@@ -67,13 +164,15 @@ function subtitles_html_template {
 
     # FIXME: find more SEO targetted way
     echo "
-        <p>
-            <a href=\"${video_url}&t=${secs}\" target=\"${video_id}\">
-                <time>${hh_mm_ss}</time>
-            </a>
-
-            <span>${text}</span>
-        </p>
+        <div class=\"subtitle\">
+            <div>
+                <a href=\"${video_url}&t=${secs}\" target=\"${video_id}\">
+                    <time>${hh_mm_ss}</time></a>
+            </div>
+            <div>
+                <span>${text}</span>
+            </div>
+        </div>
     "
 }
 
@@ -101,78 +200,13 @@ function int_to_time {
     fi
 }
 
-download_video_subtitles
+download_video_subtitles # (and meta info) to disk
+replace_template_placeholders # with values from meta info json file
+parse_subtitles_file # and store results in "html_mut"
 
-num='[0-9]'
-arrow='\s-->\s'
+echo $html_mut > "${video_id}.html"
 
-# the html which will be written in a file with subtitles and time stamps
-transcript_html_mut=""
+# delete temp downloads
+rm -rf "${info_file_name}" "${subs_file_name}"
 
-# keeps track of when subs ended (?t=)
-prev_subs_e_secs=0
-# read 3 lines at once, first one has time info, second the subtitle text, third
-# is always empty.
-while read -r timespan; do
-    read -r text_mut
-    read -r _new_line
-
-    # TODO: remove all string between []
-
-    # FIXME: bench fastest method at https://linuxhint.com/trim_string_bash/
-    text_mut="${text_mut##*( )}"
-    text_mut="${text_mut%%*( )}"
-
-    if [ -z "${text_mut}" ]; then
-        continue
-    fi
-
-    # # FIXME: build regex up front
-    if [[ ${timespan} =~ ^($num{2}):($num{2}):($num{2})\.$num{3}$arrow($num{2}):($num{2}):($num{2}) ]]; then
-        # when subs start?
-        s_hours=$(time_to_int ${BASH_REMATCH[1]})
-        s_minutes=$(time_to_int ${BASH_REMATCH[2]})
-        s_seconds=$(time_to_int ${BASH_REMATCH[3]})
-        s_secs="$(($s_hours * 3600 + $s_minutes * 60 + $s_seconds))"
-
-        # when subs end?
-        e_hours=$(time_to_int ${BASH_REMATCH[4]})
-        e_minutes=$(time_to_int ${BASH_REMATCH[5]})
-        e_seconds=$(time_to_int ${BASH_REMATCH[6]})
-        e_secs="$(($e_hours * 3600 + $e_minutes * 60 + $e_seconds))"
-
-        transcript_html_mut+=$(subtitles_html_template ${s_secs} "${text_mut}")
-
-        # add new line if speaker made a pause
-        pause_length_s=$(( $s_secs - $prev_subs_e_secs ))
-        if [[ $pause_length_s -ge $NEW_LINE_AFTER_PAUSE_S ]]; then
-            transcript_html_mut+="<br>"
-        fi
-        prev_subs_e_secs=$e_secs
-    fi
-done <<< $(tail -n +5 "${subs_file_name}")
-
-html=$(cat $HTML_TEMPLATE_PATH)
-
-# get info from youtube-dl created json
-info_json=$( jq -c '.' "${info_file_name}" )
-
-# replace "video_$PROP_prop" keys with values from info json
-properties=( id thumbnail webpage_url uploader title channel_url description )
-for prop in "${properties[@]}"
-do
-    prop_value=$( jq -r -c ".$prop" <<< $info_json )
-    html=${html//"video_${prop}_prop"/"${prop_value}"}
-done
-
-# build keywords by removing quotes and square brackets from json array
-tags=$( jq -r -c ".tags" <<< $info_json | sed 's/\"//g' )
-categories=$( jq -r -c ".categories" <<< $info_json | sed 's/\"//g' )
-html=${html/video_keywords_prop/"${categories:1:-1},${tags:1:-1}"}
-
-# and finally attach transcript
-html=${html/video_transcript_prop/${transcript_html_mut}}
-
-echo $html > "${video_id}.html"
-
-rm
+echo "[$(date)] Done!"
