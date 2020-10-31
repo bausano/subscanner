@@ -3,6 +3,12 @@
 # Downloads video subtitles from YouTube with youtube-dl and formats them into
 # html. Uses template.html file to replace placeholders and stores the result in
 # another html file.
+#
+# # Usage
+#
+# ```
+# $ ./gen_html_for_vid.sh ${video_id}
+# ```
 
 if ! command -v youtube-dl &> /dev/null
 then
@@ -53,23 +59,46 @@ function download_video_subtitles {
 
         # --id stores file with video id in name
         # --write-info-json creates a new json file with video metadata which
-        #                   we use to get title, tags, description, ...
-        result_download_sub=$(youtube-dl --id --write-info-json --skip-download --sub-lang en "${sub_flag}" "${video_url}")
-        if [[ "${result_download_sub}" == *"${stdout_success_msg}"* ]]; then
+        #                   we use to get title, tags, thumbbnail, ...
+        result_download_subs=$(youtube-dl --id --write-info-json --skip-download --sub-lang en "${sub_flag}" "${video_url}")
+        if [[ "${result_download_subs}" == *"${stdout_success_msg}"* ]]; then
             return 0
         fi
 
         return 1
     }
 
-    # attempt download subs
-    # option to download auto subs is disabled as quality is low
+    # attempt download manmade subs or fallback to autogen
     youtube_dl --write-sub || youtube_dl --write-auto-sub
 
     if [[ $? != 0 || -z "${subs_file_name}" ]]; then
         echo "Subtitles for ${video_id} cannot be downloaded."
         exit $?
     fi
+}
+
+function replace_template_placeholders {
+    ## Gets info from metadata file and replaces placeholders in "html_mut".
+    echo "[$(date)] Replacing template placeholders..."
+
+    # get info from youtube-dl created json
+    local info_json=$( jq -c '.' "${info_file_name}" )
+
+    # replace "video_$PROP_prop" keys with values from info json
+    local properties=(
+        id title thumbnail webpage_url
+        uploader channel_url
+    )
+    for prop in "${properties[@]}"
+    do
+        prop_value=$( jq -r -c ".$prop" <<< $info_json )
+        html_mut=${html_mut//"video_${prop}_prop"/"${prop_value}"}
+    done
+
+    # build keywords by removing quotes and square brackets from json array
+    local tags=$( jq -r -c ".tags" <<< $info_json | sed 's/\"//g' )
+    local categories=$( jq -r -c ".categories" <<< $info_json | sed 's/\"//g' )
+    html_mut=${html_mut/video_keywords_prop/"${categories:1:-1},${tags:1:-1}"}
 }
 
 function parse_subtitles_file {
@@ -159,30 +188,6 @@ function parse_subtitles_file {
 
     # and finally attach transcript to the html
     html_mut=${html_mut/video_transcript_prop/${transcript_mut}}
-}
-
-function replace_template_placeholders {
-    ## Gets info from metadata file and replaces placeholders in "html_mut".
-    echo "[$(date)] Replacing template placeholders..."
-
-    # get info from youtube-dl created json
-    local info_json=$( jq -c '.' "${info_file_name}" )
-
-    # replace "video_$PROP_prop" keys with values from info json
-    local properties=(
-        id title thumbnail webpage_url
-        uploader channel_url
-    )
-    for prop in "${properties[@]}"
-    do
-        prop_value=$( jq -r -c ".$prop" <<< $info_json )
-        html_mut=${html_mut//"video_${prop}_prop"/"${prop_value}"}
-    done
-
-    # build keywords by removing quotes and square brackets from json array
-    local tags=$( jq -r -c ".tags" <<< $info_json | sed 's/\"//g' )
-    local categories=$( jq -r -c ".categories" <<< $info_json | sed 's/\"//g' )
-    html_mut=${html_mut/video_keywords_prop/"${categories:1:-1},${tags:1:-1}"}
 }
 
 download_video_subtitles # (and meta info) to disk
