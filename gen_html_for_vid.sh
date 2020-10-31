@@ -98,9 +98,14 @@ function parse_subtitles_file {
 
         if [[ ${timespan} =~ $MATCH_TIMESPAN ]]; then
             # when subs start?
-            s_hours=$(time_to_int ${BASH_REMATCH[1]})
-            s_minutes=$(time_to_int ${BASH_REMATCH[2]})
-            s_seconds=$(time_to_int ${BASH_REMATCH[3]})
+            s_hh="${BASH_REMATCH[1]}"
+            s_mm="${BASH_REMATCH[2]}"
+            s_ss="${BASH_REMATCH[3]}"
+            s_hh_mm_ss="${s_hh}:${s_mm}:${s_seconds_t}"
+
+            s_hours=$(time_to_int ${s_hh})
+            s_minutes=$(time_to_int ${s_mm})
+            s_seconds=$(time_to_int ${s_ss})
             s_secs="$(($s_hours * 3600 + $s_minutes * 60 + $s_seconds))"
 
             # when subs end?
@@ -116,7 +121,7 @@ function parse_subtitles_file {
             fi
             prev_subs_e_secs_mut=$e_secs
 
-            transcript_mut+=$(subtitles_html_template ${s_secs} "${text_mut}")
+            transcript_mut+=$(subtitles_html_template ${s_secs} ${s_hh_mm_ss} "${text_mut}")
         fi
     done <<< $(tail -n +5 "${subs_file_name}")
 
@@ -149,18 +154,12 @@ function replace_template_placeholders {
 }
 
 function subtitles_html_template {
-    ## Given seconds into the video, generate timeline and subtitle html.
+    ## Given seconds into the video and timestamp, generate timeline and
+    ## subtitle html.
 
     local secs=$1
+    local hh_mm_ss=$1
     local text=$2
-
-    # divides total secs to time
-    local hours=$(( $secs / 3600 ))
-    local rem_secs=$(( $secs - 3600 * $hours ))
-    local mins=$(( $rem_secs / 60 ))
-    local rem_secs=$(( $rem_secs - 60 * $mins ))
-
-    local hh_mm_ss="$(int_to_time ${hours}):$(int_to_time ${mins}):$(int_to_time ${rem_secs})"
 
     # FIXME: find more SEO targetted way
     echo "
@@ -188,23 +187,11 @@ function time_to_int {
     fi
 }
 
-function int_to_time {
-    ## Converts integer to double digit number.
-
-    local number=$1
-
-    if [[ (${number} -lt 10) ]]; then
-        echo "0${number}"
-    else
-        echo ${number}
-    fi
-}
-
-download_video_subtitles # (and meta info) to disk
-replace_template_placeholders # with values from meta info json file
+# download_video_subtitles # (and meta info) to disk
+# replace_template_placeholders # with values from meta info json file
 parse_subtitles_file # and store results in "html_mut"
-
 echo $html_mut > "${video_id}.html"
+exit 0
 
 # delete temp downloads
 rm -rf "${info_file_name}" "${subs_file_name}"
