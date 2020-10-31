@@ -188,7 +188,7 @@ function replace_template_placeholders {
 download_video_subtitles # (and meta info) to disk
 replace_template_placeholders # with values from meta info json file
 parse_subtitles_file # and store results in "html_mut"
-echo $html_mut > "${video_id}.html"
+echo $html_mut > "pages/${video_id}.html"
 
 # delete temp downloads
 rm -rf "${info_file_name}" "${subs_file_name}"
