@@ -33,7 +33,10 @@ readonly video_url="https://www.youtube.com/watch?v=${video_id}"
 readonly info_file_name="${video_id}.info.json"
 readonly subs_file_name="${video_id}.en.vtt"
 
+# will be stored as a file
 html_mut=$(cat $HTML_TEMPLATE_PATH)
+# html to replace template's transcript placeholder with paht
+transcript_mut=""
 
 function download_video_subtitles {
     ## Given video id downloads subtitles to disk and returns path to the file.
@@ -75,10 +78,41 @@ function parse_subtitles_file {
     echo "[$(date)] Parsing subs file..."
 
     # keeps track of when subs ended (?t=)
-    local prev_subs_e_secs_mut=0
+    local prev_subs_ended_at_sec=0
 
-    # html to replace template's placeholder with
-    local transcript_mut=""
+    function time_to_int {
+        ## Converts double digit number such as hours, minutes, seconds.
+
+        local number=$1
+
+        if [[ ${number} = 0* ]]; then
+            return ${number:1}
+        else
+            return ${number}
+        fi
+    }
+
+    function subtitles_html_template {
+        ## Given seconds into the video and timestamp, generate timeline and
+        ## subtitle html.
+
+        local appear_at_sec=$1
+        local hh_mm_ss=$2
+        local text=$3
+
+        # FIXME: find more SEO targetted way
+        transcript_mut+="
+            <div class=\"subtitle\">
+                <div>
+                    <a href=\"${video_url}&t=${appear_at_sec}\" target=\"${video_id}\">
+                        <time>${hh_mm_ss}</time></a>
+                </div>
+                <div>
+                    <span>${text}</span>
+                </div>
+            </div>
+        "
+    }
 
     # read 3 lines at once, first one has time info, second the subtitle text, third
     # is always empty.
@@ -88,10 +122,9 @@ function parse_subtitles_file {
 
         # TODO: remove all string between [ and ]
 
-        # FIXME: bench fastest method at https://linuxhint.com/trim_string_bash/
-        # text_mut="${text_mut##*( )}"
-        # text_mut="${text_mut%%*( )}"
-        text_mut=`echo $text_mut | sed 's/ *$//g'`
+        # trim spaces
+        text_mut="${text_mut##*( )}"
+        text_mut="${text_mut%%*( )}"
 
         if [ -z "${text_mut}" ]; then
             continue
@@ -102,27 +135,25 @@ function parse_subtitles_file {
             s_hh="${BASH_REMATCH[1]}"
             s_mm="${BASH_REMATCH[2]}"
             s_ss="${BASH_REMATCH[3]}"
-            s_hh_mm_ss="${s_hh}:${s_mm}:${s_seconds_t}"
+            s_hh_mm_ss="${s_hh}:${s_mm}:${s_ss}"
+            time_to_int ${s_hh}; s_hours=$?
+            time_to_int ${s_mm}; s_minutes=$?
+            time_to_int ${s_ss}; s_seconds=$?
+            curr_subs_appeared_at_sec="$(($s_hours * 3600 + $s_minutes * 60 + $s_seconds))"
 
-            s_hours=$(time_to_int ${s_hh})
-            s_minutes=$(time_to_int ${s_mm})
-            s_seconds=$(time_to_int ${s_ss})
-            s_secs="$(($s_hours * 3600 + $s_minutes * 60 + $s_seconds))"
-
-            # when subs end?
-            e_hours=$(time_to_int ${BASH_REMATCH[4]})
-            e_minutes=$(time_to_int ${BASH_REMATCH[5]})
-            e_seconds=$(time_to_int ${BASH_REMATCH[6]})
-            e_secs="$(($e_hours * 3600 + $e_minutes * 60 + $e_seconds))"
-
-            # add new line if speaker made a pause
-            pause_length_s=$(( $s_secs - $prev_subs_e_secs_mut ))
+            # add new line if there was pause
+            pause_length_s=$(( $curr_subs_appeared_at_sec - $prev_subs_ended_at_sec ))
             if [[ $pause_length_s -ge $NEW_LINE_AFTER_PAUSE_S ]]; then
                 transcript_mut+="<br>"
             fi
-            prev_subs_e_secs_mut=$e_secs
 
-            transcript_mut+=$(subtitles_html_template ${s_secs} ${s_hh_mm_ss} "${text_mut}")
+            subtitles_html_template ${curr_subs_appeared_at_sec} ${s_hh_mm_ss} "${text_mut}"
+
+            # when subs end?
+            time_to_int ${BASH_REMATCH[4]}; e_hours=$?
+            time_to_int ${BASH_REMATCH[5]}; e_minutes=$?
+            time_to_int ${BASH_REMATCH[6]}; e_seconds=$?
+            prev_subs_ended_at_sec="$(($e_hours * 3600 + $e_minutes * 60 + $e_seconds))"
         fi
     done <<< $(tail -n +5 "${subs_file_name}")
 
@@ -154,45 +185,10 @@ function replace_template_placeholders {
     html_mut=${html_mut/video_keywords_prop/"${categories:1:-1},${tags:1:-1}"}
 }
 
-function subtitles_html_template {
-    ## Given seconds into the video and timestamp, generate timeline and
-    ## subtitle html.
-
-    local secs=$1
-    local hh_mm_ss=$1
-    local text=$2
-
-    # FIXME: find more SEO targetted way
-    echo "
-        <div class=\"subtitle\">
-            <div>
-                <a href=\"${video_url}&t=${secs}\" target=\"${video_id}\">
-                    <time>${hh_mm_ss}</time></a>
-            </div>
-            <div>
-                <span>${text}</span>
-            </div>
-        </div>
-    "
-}
-
-function time_to_int {
-    ## Converts double digit number such as hours, minutes, seconds.
-
-    local number=$1
-
-    if [[ ${number} = 0* ]]; then
-        echo ${number:1}
-    else
-        echo ${number}
-    fi
-}
-
-# download_video_subtitles # (and meta info) to disk
-# replace_template_placeholders # with values from meta info json file
+download_video_subtitles # (and meta info) to disk
+replace_template_placeholders # with values from meta info json file
 parse_subtitles_file # and store results in "html_mut"
 echo $html_mut > "${video_id}.html"
-exit 0
 
 # delete temp downloads
 rm -rf "${info_file_name}" "${subs_file_name}"
