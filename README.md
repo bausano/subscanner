@@ -4,6 +4,8 @@ At the moment of writing the app, there is no way to search YouTube video conten
 
 An app which scrapes YouTube subtitles APIs and creates an html file with the transcript. The html files are uploaded to an S3 bucket. The content is indexed by search engines.
 
+It's also a bash practice exercise.
+
 ## How it works
 We use `youtube-dl` to download video information (`${video_id}.info.json`) and subtitles (`${video_id}.en.vtt`).
 
