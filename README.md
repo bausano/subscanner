@@ -15,10 +15,10 @@ $ ./gen_html_for_vid.sh ${video_id}
 where `video_id` is the value of `v=` query param in `https://www.youtube.com/watch?v=${video_id}`.
 
 ### Dependencies
-You must have `youtube-dl` utility installed to fetch the subs and `jq` to query info json file.
+You must have `youtube-dl` utility installed to fetch the subs and `jq` to query info json file. Then `minify` for html size reduction and `gzip` to serve gzip file to clients.
 
 ```
-sudo apt-get install -y youtube-dl jq
+sudo apt-get install -y youtube-dl jq minify gzip
 ```
 
 ## How it works
@@ -28,14 +28,14 @@ We read the info and replace placeholders in format `video_${placeholder}_prop` 
 
 We parse the subtitles video 3 lines at a time, discarding empty or malformed content. The text with timestamp is stored in a global variable as html `div`. When we're done reading all lines, we replace `video_transcript_prop` in the `template.html` file with the generated html.
 
-We write the output to an html file `${video_id}.html`.
+We write the output to an html file `${video_id}.html` after minimizing it (~ 50% off) and gzipping it (~ 80% off).
 
 ## TODO
-- list all video ids from channel
-- sam template to create necessary resources on aws
-- script to upload html file
-- database of last time we scraped all videos from a channel which helps avoid re-scraping videos
-- minify and gzip html files when serving them
+- list all channel's video ids
+- SAM template to create necessary resources on AWS
+- script to upload an html file to S3
+- database of last time we scraped all videos from a channel (helps avoid re-scraping videos)
+- minify and gzip html files (https://stackoverflow.com/questions/8080824/how-to-serve-gzipped-assets-from-amazon-s3)
 - google adwords
 
 ## Test videos
