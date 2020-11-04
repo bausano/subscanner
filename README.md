@@ -6,22 +6,29 @@ An app which scrapes YouTube subtitles APIs and creates an html file with the tr
 
 It's also a bash practice exercise.
 
-## How to run
-
-```
-$ ./gen_html_for_vid.sh ${video_id}
-```
-
-where `video_id` is the value of `v=` query param in `https://www.youtube.com/watch?v=${video_id}`.
-
-### Dependencies
+## Dependencies
 You must have `youtube-dl` utility installed to fetch the subs and `jq` to query info json file. Then `minify` for html size reduction and `gzip` to serve gzip file to clients.
 
 ```
-sudo apt-get install -y youtube-dl jq minify gzip
+$ apt-get install -y youtube-dl jq minify gzip
+```
+
+You must [install AWS CLI][aws-cli-install] and [configure your environment](#publishing-to-web).
+
+```
+$ aws --version
+aws-cli/2.0.61
 ```
 
 ## How it works
+### Preparing html
+```
+$ ./gen_html_for_vid.sh ${video_id}
+```
+* **`video_id`** is the value of `v=` query param in `https://www.youtube.com/watch?v=${video_id}`
+
+---
+
 We use `youtube-dl` to download video information (`${video_id}.info.json`) and subtitles (`${video_id}.en.vtt`).
 
 We read the info and replace placeholders in format `video_${placeholder}_prop` from the `template.html` file.
@@ -30,21 +37,39 @@ We parse the subtitles video 3 lines at a time, discarding empty or malformed co
 
 We write the output to an html file `${video_id}.html` after minimizing it (~ 50% off) and gzipping it (~ 80% off).
 
+### Publishing to web
+```
+./upload_pages_to_s3.sh ${bucket}
+```
+* **`bucket`** is name of AWS S3 bucket to upload the generated html files located in `pages` dir to
+
+---
+
+We use AWS CLI to sync `pages` directory with provided S3 bucket name. The S3 is then configured as a static website and is published to the web via Cloudfront.
+
+To upload to S3 credentials must be provided. There are several options:
+* run `aws configure` and then the script - the CLI will pick up your profile;
+* copy `.env.example` into `.env` file and use your credentials;
+* `export` necessary environment variables before running the script.
+
 ## TODO
 - list all channel's video ids
-- script to upload an html file to S3
 - database of last time we scraped all videos from a channel (helps avoid re-scraping videos)
 - google adwords
 - show time stamp only every 10-30 seconds
 - put all text together so that the time stamps don't intervene (SEO).
 - description and favicon
 - minimize html tags
-- cache, content type and encoding headers
 - look into http/2 on s3
-- cache on css file
+- site map
+- link videos in html so that search engines can discover all pages
+- index and error page
 
 ## Test videos
 There are no tests for the logic so far. If we wanted to make tests, here is a list of videos to use:
 - `MBnnXbOM5S4` control example
 - `wL7tSgUpy8w` has auto generated subtitles but there's only instrumental music
 - `3x1b_S6Qp2Q` for benchmarking large videos, auto generated subs
+
+<!-- Invisible list of references -->
+[aws-cli-install]: https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2-linux.html

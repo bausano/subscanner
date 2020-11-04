@@ -1,3 +1,6 @@
 *.en.vtt
 *.info.json
 pages/*.html
+.env
+!pages/index.html
+!pages/error.html

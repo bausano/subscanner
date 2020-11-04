@@ -17,7 +17,8 @@ function check_dependency {
 
     if ! command -v $dep &> /dev/null
     then
-        printf "${dep} is missing\nsudo apt-get install ${dep}\n"
+        echo "${dep} is missing"
+        echo "\$ sudo apt-get install ${dep}"
         exit 1
     fi
 }
@@ -36,9 +37,8 @@ readonly MATCH_TIMESPAN="^($D{2}):($D{2}):($D{2})\.$D{3}\s-->\s($D{2}):($D{2}):(
 
 # first arg is famous "?v=" query param
 readonly video_id=$1
-
 if [ -z "${video_id}" ]; then
-    printf "Video id must be provided. Example: ./gen_html_for_vid MBnnXbOM5S4"
+    echo "Video id must be provided. Example: ./gen_html_for_vid MBnnXbOM5S4"
     exit 1
 fi
 
@@ -53,7 +53,7 @@ transcript_mut=""
 
 function download_video_subtitles {
     ## Given video id downloads subtitles to disk and returns path to the file.
-    printf "[$(date)] Downloading subs...\n"
+    echo "[$(date)] Downloading subs..."
 
     function youtube_dl {
         ## Runs youtube-dl to get subtitles. Can be parametrized to get auto
@@ -79,14 +79,14 @@ function download_video_subtitles {
     youtube_dl --write-sub || youtube_dl --write-auto-sub
 
     if [[ $? != 0 || -z "${subs_file_name}" ]]; then
-        printf "Subtitles for ${video_id} cannot be downloaded.\n"
+        echo "Subtitles for ${video_id} cannot be downloaded."
         exit $?
     fi
 }
 
 function replace_template_placeholders {
     ## Gets info from metadata file and replaces placeholders in "html_mut".
-    printf "[$(date)] Replacing template placeholders...\n"
+    echo "[$(date)] Replacing template placeholders..."
 
     # get info from youtube-dl created json
     local info_json=$( jq -c '.' "${info_file_name}" )
@@ -111,7 +111,7 @@ function replace_template_placeholders {
 function parse_subtitles_file {
     ## Loads and parses subs, puts results into html. This function mutates
     ## parameter "html_mut".
-    printf "[$(date)] Parsing subs file...\n"
+    echo "[$(date)] Parsing subs file..."
 
     # keeps track of when subs ended (?t=)
     local prev_subs_ended_at_sec=0
@@ -202,10 +202,10 @@ replace_template_placeholders # with values from meta info json file
 parse_subtitles_file # and store results in "html_mut"
 
 # Minifies the html, gzips it and stores it in a file.
-printf "[$(date)] Minifying html and storing it gzipped...\n"
+echo "[$(date)] Minifying html and storing it gzipped..."
 echo "${html_mut}" | minify --type=html | gzip -c > "pages/${video_id}.html"
 
 # delete temp downloads
 rm -rf "${info_file_name}" "${subs_file_name}"
 
-printf "[$(date)] Done!\n"
+echo "[$(date)] Done!"
