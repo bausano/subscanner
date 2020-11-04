@@ -1,8 +1,8 @@
 /*
-    The breakpoints are copied from [Bulma's container][bulma-container].
-
-    [bulma-container]: https://bulma.io/documentation/layout/container/
-*/
+ * The breakpoints are copied from [Bulma's container][bulma-container].
+ *
+ * [bulma-container]: https://bulma.io/documentation/layout/container/
+ */
 
 header.header {
     width: 100%;
@@ -22,10 +22,15 @@ section.content {
 
 section.content .subtitle {
     display: flex;
+    flex-direction: column-reverse;
 }
 
-section.content .subtitle div:first-child {
-    margin-right: 12px;
+section.content .subtitle .timestamp {
+    /* https://stackoverflow.com/questions/6900124/how-to-make-certain-text-not-selectable-with-css */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 section.content .subtitle a {
@@ -38,12 +43,18 @@ section.content .subtitle time {
 }
 
 /* Medium devices */
-@media only screen and (min-width: 1024px) {
+@media only screen and (min-width: 1127px) {
     header.header {
         width: 960px;
     }
 
     section.content {
         width: 960px;
+    }
+
+    section.content .subtitle .timestamp {
+        /* Pull timestamp to the left on desktop. */
+        transform: translateX(-110%);
+        position: absolute;
     }
 }

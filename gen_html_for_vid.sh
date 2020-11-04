@@ -34,6 +34,8 @@ readonly NEW_LINE_AFTER_PAUSE_S=4
 # "11:22:33.938 --> 44:55:66" matches position "nn" in nth group for 6 groups
 readonly D="[[:digit:]]"
 readonly MATCH_TIMESPAN="^($D{2}):($D{2}):($D{2})\.$D{3}\s-->\s($D{2}):($D{2}):($D{2})"
+# don't display timestamp all the time (clutters page)
+readonly DISPLAY_TIMESTAMP_EVERY_N_S=20
 
 # first arg is famous "?v=" query param
 readonly video_id=$1
@@ -116,6 +118,10 @@ function parse_subtitles_file {
     # keeps track of when subs ended (?t=)
     local prev_subs_ended_at_sec=0
 
+    # keeps track of when last <time> tag was displayed
+    # display <time> only once in a while to avoid cluttering
+    local last_timestamp_displayed_at_sec=0
+
     function time_to_int {
         ## Converts double digit number such as hours, minutes, seconds.
 
@@ -135,19 +141,22 @@ function parse_subtitles_file {
         local appear_at_sec=$1
         local hh_mm_ss=$2
         local text=$3
+        local display_timestamp=$4
 
-        # FIXME: find more SEO targetted way
-        transcript_mut+="
-            <div class=\"subtitle\">
-                <div>
+        transcript_mut+="<div class=\"subtitle\">"
+
+        if $display_timestamp; then
+           transcript_mut+="
+                <span class=\"timestamp\" unselectable=\"on\">
                     <a href=\"${video_url}&t=${appear_at_sec}\" target=\"${video_id}\">
-                        <time>${hh_mm_ss}</time></a>
-                </div>
-                <div>
-                    <span>${text}</span>
-                </div>
-            </div>
-        "
+                        <time>${hh_mm_ss}</time>
+                    </a>
+                </span>
+            "
+        fi
+
+        transcript_mut+="<span>${text}</span>"
+        transcript_mut+="</div>"
     }
 
     # read 3 lines at once, first one has time info, second the subtitle text, third
@@ -183,7 +192,14 @@ function parse_subtitles_file {
                 transcript_mut+="<br>"
             fi
 
-            subtitles_html_template ${curr_subs_appeared_at_sec} ${s_hh_mm_ss} "${text_mut}"
+            display_timestamp=false
+            secs_without_timestamp=$(( $curr_subs_appeared_at_sec - $last_timestamp_displayed_at_sec ))
+            if [[ $secs_without_timestamp -ge $DISPLAY_TIMESTAMP_EVERY_N_S ]]; then
+                display_timestamp=true
+                last_timestamp_displayed_at_sec=$curr_subs_appeared_at_sec
+            fi
+
+            subtitles_html_template ${curr_subs_appeared_at_sec} ${s_hh_mm_ss} "${text_mut}" ${display_timestamp}
 
             # when subs end?
             time_to_int ${BASH_REMATCH[4]}; e_hours=$?

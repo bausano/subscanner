@@ -39,7 +39,7 @@ We write the output to an html file `${video_id}.html` after minimizing it (~ 50
 
 ### Publishing to web
 ```
-./upload_pages_to_s3.sh ${bucket}
+$ ./upload_pages_to_s3.sh ${bucket}
 ```
 * **`bucket`** is name of AWS S3 bucket to upload the generated html files located in `pages` dir to
 
@@ -52,18 +52,7 @@ To upload to S3 credentials must be provided. There are several options:
 * copy `.env.example` into `.env` file and use your credentials;
 * `export` necessary environment variables before running the script.
 
-## TODO
-- list all channel's video ids
-- database of last time we scraped all videos from a channel (helps avoid re-scraping videos)
-- google adwords
-- show time stamp only every 10-30 seconds
-- put all text together so that the time stamps don't intervene (SEO).
-- description and favicon
-- minimize html tags
-- look into http/2 on s3
-- site map
-- link videos in html so that search engines can discover all pages
-- index and error page
+Updating static files like the `style.css`, `index.html` and `error.html` is currently manual. Since these files won't change very often automation is not an attractive option.
 
 ## Test videos
 There are no tests for the logic so far. If we wanted to make tests, here is a list of videos to use:
