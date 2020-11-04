@@ -32,11 +32,16 @@ We write the output to an html file `${video_id}.html` after minimizing it (~ 50
 
 ## TODO
 - list all channel's video ids
-- SAM template to create necessary resources on AWS
 - script to upload an html file to S3
 - database of last time we scraped all videos from a channel (helps avoid re-scraping videos)
-- minify and gzip html files (https://stackoverflow.com/questions/8080824/how-to-serve-gzipped-assets-from-amazon-s3)
 - google adwords
+- show time stamp only every 10-30 seconds
+- put all text together so that the time stamps don't intervene (SEO).
+- description and favicon
+- minimize html tags
+- cache, content type and encoding headers
+- look into http/2 on s3
+- cache on css file
 
 ## Test videos
 There are no tests for the logic so far. If we wanted to make tests, here is a list of videos to use:
