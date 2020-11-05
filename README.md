@@ -33,7 +33,7 @@ We use `youtube-dl` to download video information (`${video_id}.info.json`) and 
 
 We read the info and replace placeholders in format `video_${placeholder}_prop` from the `template.html` file.
 
-We parse the subtitles video 3 lines at a time, discarding empty or malformed content. The text with timestamp is stored in a global variable as html `div`. When we're done reading all lines, we replace `video_transcript_prop` in the `template.html` file with the generated html.
+We use `ffmpeg` to convert `vtt` into `srt` which is easier to parse. Each subtitle block starts with an index, next line is always time span and then the content. The text with timestamp is stored in a global variable as html `div`. When we're done reading all lines, we replace `video_transcript_prop` in the `template.html` file with the generated html.
 
 We write the output to an html file `${video_id}.html` after minimizing it (~ 50% off) and gzipping it (~ 80% off).
 
