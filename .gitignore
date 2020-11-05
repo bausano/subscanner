@@ -1,4 +1,5 @@
 *.en.vtt
+*.en.srt
 *.info.json
 pages/*.html
 .env

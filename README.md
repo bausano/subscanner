@@ -7,10 +7,10 @@ An app which scrapes YouTube subtitles APIs and creates an html file with the tr
 It's also a bash practice exercise.
 
 ## Dependencies
-You must have `youtube-dl` utility installed to fetch the subs and `jq` to query info json file. Then `minify` for html size reduction and `gzip` to serve gzip file to clients.
+You must have `youtube-dl` utility installed to fetch the subs and `jq` to query info json file. Then `minify` for html size reduction and `gzip` to serve gzip file to clients. We use `ffmpeg` to convert from `vtt` to `srt` which is much easier to parse.
 
 ```
-$ apt-get install -y youtube-dl jq minify gzip
+$ apt-get install -y youtube-dl jq minify gzip ffmpeg
 ```
 
 You must [install AWS CLI][aws-cli-install] and [configure your environment](#publishing-to-web).
@@ -56,9 +56,11 @@ Updating static files like the `style.css`, `index.html` and `error.html` is cur
 
 ## Test videos
 There are no tests for the logic so far. If we wanted to make tests, here is a list of videos to use:
-- `MBnnXbOM5S4` control example
-- `wL7tSgUpy8w` has auto generated subtitles but there's only instrumental music
-- `3x1b_S6Qp2Q` for benchmarking large videos, auto generated subs
+* `MBnnXbOM5S4` control example
+* `wL7tSgUpy8w` has autogen subtitles but there's only instrumental music
+* `3x1b_S6Qp2Q` for benchmarking large videos, autogen subs
+* `pTn6Ewhb27k` breaks the "timestamp, text, new line, next" pattern of autogen subtitles
+* `ZxYOEwM6Wbk` has weird duplicated subtitles
 
 <!-- Invisible list of references -->
 [aws-cli-install]: https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2-linux.html
