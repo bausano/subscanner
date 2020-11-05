@@ -30,8 +30,6 @@ check_dependency "minify"
 check_dependency "ffmpeg"
 
 readonly HTML_TEMPLATE_PATH="template.html"
-# if N seconds between subtitles then start new paragraph
-readonly NEW_LINE_AFTER_PAUSE_S=4
 # "11:22:33.938 --> 44:55:66" matches position "nn" in nth group for 6 groups
 readonly D="[[:digit:]]"
 readonly MATCH_TIMESPAN="^($D{2}):($D{2}):($D{2}),$D{3}\s-->\s($D{2}):($D{2}):($D{2})"
@@ -57,7 +55,7 @@ transcript_mut=""
 
 function download_video_subtitles {
     ## Given video id downloads subtitles to disk and returns path to the file.
-    echo "[$(date)] Downloading subs..."
+    echo "[$(date)] Downloading subs for ${video_id}..."
 
     function youtube_dl {
         ## Runs youtube-dl to get subtitles. Can be parametrized to get auto
@@ -119,9 +117,6 @@ function parse_subtitles_file {
     ## Loads and parses subs, puts results into html. This function mutates
     ## parameter "html_mut".
     echo "[$(date)] Parsing subs file..."
-
-    # keeps track of when subs ended (?t=)
-    local prev_subs_ended_at_sec=0
 
     # keeps track of when last <time> tag was displayed
     # display <time> only once in a while to avoid cluttering
@@ -208,12 +203,6 @@ function parse_subtitles_file {
         time_to_int ${s_ss}; s_seconds=$?
         curr_subs_appeared_at_sec="$(($s_hours * 3600 + $s_minutes * 60 + $s_seconds))"
 
-        # add new line if there was pause
-        pause_length_s=$(( $curr_subs_appeared_at_sec - $prev_subs_ended_at_sec ))
-        if [[ $pause_length_s -ge $NEW_LINE_AFTER_PAUSE_S ]]; then
-            transcript_mut+="<br>"
-        fi
-
         # only show timestamp here and there to avoid clutter
         display_timestamp=false
         secs_without_timestamp=$(( $curr_subs_appeared_at_sec - $last_timestamp_displayed_at_sec ))
@@ -229,7 +218,6 @@ function parse_subtitles_file {
         time_to_int ${BASH_REMATCH[4]}; e_hours=$?
         time_to_int ${BASH_REMATCH[5]}; e_minutes=$?
         time_to_int ${BASH_REMATCH[6]}; e_seconds=$?
-        prev_subs_ended_at_sec="$(($e_hours * 3600 + $e_minutes * 60 + $e_seconds))"
     done <<< $(tail -n +2 "${srt_file_name}") # the first line is always index "1"
 
     # and finally attach transcript to the html
