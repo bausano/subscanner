@@ -44,16 +44,17 @@ for key in "$@"; do
     shift
 done
 
-
 dateafter=""
 if [ -n "${since}" ]; then
     dateafter="--dateafter ${since//-/}"
 fi
 
-# takes a while
-# FIXME: sometimes times out or returns empty result
 echo "[$(date)] Scanning videos..."
-readonly ids=$(youtube-dl --get-id ${dateafter} "${channel_url}")
+# takes a while
+# FIXME(https://github.com/bausano/yt-search/issues/9)
+# FIXME(https://github.com/bausano/yt-search/issues/10)
+readonly ids=$( youtube-dl --get-id ${dateafter} "${channel_url}" )
+abort_on_err $? "Cannot get channel video ids"
 
 echo "[$(date)] Downloading subs for following vids:"
 echo "${ids}"
@@ -64,16 +65,17 @@ do
     fi
 
     # limit number of running jobs
-    while [ `jobs | wc -l | xargs` -gt $max_concurrent ]
+    while [ `jobs | wc -l | xargs` -ge $max_concurrent ]
     do
         sleep 1
     done
 
-    # gen html in background and prepend stdout with vid id
+    # in background and prepend stdout with vid id
+    # FIXME: what happens if a job fails
     ./gen_vid_page.sh "${video_id}" | sed 's/^/['"${video_id}"'] /' &
 done <<< "${ids}"
 
-# await all running jobs
+# await all jobs
 for job in `jobs -p`; do wait ${job}; done
 
 echo "[$(date)] Done!"

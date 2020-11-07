@@ -4,7 +4,7 @@ source lib.sh
 
 readonly help='
 Downloads video subtitles from YouTube with youtube-dl and formats them into
-html. Uses template.html file to replace placeholders and stores the result
+html. Uses pages/template.html file to replace placeholders and stores the result
 in another html file.
 
 $ ./gen_vid_page.sh ${video_id}
@@ -17,7 +17,7 @@ check_dependency "gzip"
 check_dependency "minify"
 check_dependency "ffmpeg"
 
-readonly HTML_TEMPLATE_PATH="template.html"
+readonly HTML_TEMPLATE_PATH="pages/template.html"
 # "11:22:33.938 --> 44:55:66" matches position "nn" in nth group for 6 groups
 readonly D="[[:digit:]]"
 readonly MATCH_TIMESPAN="^($D{2}):($D{2}):($D{2}),$D{3}\s-->\s($D{2}):($D{2}):($D{2})"
@@ -75,14 +75,12 @@ function download_video_subtitles {
 
     # attempt download manmade subs or fallback to autogen
     youtube_dl --write-sub || youtube_dl --write-auto-sub
-
-    if [[ $? != 0 || -z "${vtt_file_name}" ]]; then
-        echo "Subtitles for ${video_id} cannot be downloaded."
-        exit $?
-    fi
+    abort_on_err $? "Subtitles for ${video_id} cannot be downloaded."
 
     # convert vtt to srt, better format to parse
+    # FIXME(https://github.com/bausano/yt-search/issues/11)
     ffmpeg -y -i "${vtt_file_name}" "${srt_file_name}" > /dev/null 2>&1
+    abort_on_err $? "Subtitles for ${video_id} cannot be converted."
 }
 
 function replace_template_placeholders {
@@ -229,6 +227,7 @@ parse_subtitles_file # and store results in "html_mut"
 # Minifies the html, gzips it and stores it in a file.
 echo "[$(date)] Minifying html and storing it gzipped..."
 echo "${html_mut}" | minify --type=html | gzip -c > "pages/${video_id}.html"
+abort_on_err $? "Html cannot be stored."
 
 # delete temp downloads
 rm -rf "${info_file_name}" "${vtt_file_name}" "${srt_file_name}"

@@ -35,7 +35,7 @@ $ ./gen_vid_page.sh ${video_id}
 
 We use `youtube-dl` to download video information (`${video_id}.info.json`) and subtitles (`${video_id}.en.vtt`).
 
-We read the info and replace placeholders in format `video_${placeholder}_prop` from the `template.html` file.
+We read the info and replace placeholders in format `video_${placeholder}_prop` from the `pages/template.html` file.
 
 We use `ffmpeg` to convert `vtt` into `srt` which is easier to parse. Each subtitle block starts with an index, next line is always time span and then the content. The text with timestamp is stored in a global variable as html `div`. When we're done reading all lines, we replace `video_transcript_prop` in the `template.html` file with the generated html.
 
@@ -59,11 +59,15 @@ To upload to S3 credentials must be provided. There are several options:
 Updating static files like the `style.css`, `index.html` and `error.html` is currently manual. Since these files won't change very often automation is not an attractive option.
 
 ### Persistence
-Should we want to access list of all videos we've scraped, we can list the objects in the S3 bucket. However this level of granularity is not necessary. Instead, we use [sitemap][sitemap] to store which channels have we scraped and when. A site map links to a channel html which lists links to videos.
+In [DynamoDB table][aws-cli-dynamodb] we store `channel_id` as string primary key and each row has associated `updated_at` number value (unix timestamp). Every time we revisit channel to scrape new videos, we update the `updated_at` value in db.
 
-We leverage the `<lastmod>` tag to remember the last time we scraped the channel. A script then visits the sitemap file and searches for channels which haven't been scraped in D days. We then run a script which returns list of ids of videos which have been uploaded since the last time we scraped (or maybe last time we scraped minus some delay to fetch imminent subtitle improvements and fail safe).
+The `add_channel.sh` script is used to add new entries to db. It will scrape all videos to date.
 
-A sitemap xml file is gzip-ped and uploaded to the S3 bucket. A single sitemap can have at most 50k urls. Each next 50k scraped channels are stored in new sitemap. The [`sitemap_index.xml`](static/sitemap_index.xml) file keeps track of all the sitemap files created so far. Addition to the index are done manually for this being so infrequent event automation doesn't make sense so far.
+Should we want to access list of all videos we've scraped, we can list the objects in the S3 bucket. However this level of granularity is not necessary.
+
+In the `upload_pages_to_s3.sh` script we append links to new videos to a [sitemap][sitemap file]. The sitemap is downloaded from S3, appended and uploaded back to the S3 bucket. If the file doesn't exist, new one is created. Provide the name of the file with `--sitemap` flag. This is useful for parallel scraping where each process only operates on its own sitemap file thus avoiding data races.
+
+The [`sitemap_index.xml`](static/sitemap_index.xml) file keeps track of all the sitemap files created so far. New additions are manual.
 
 ## Test videos
 There are no tests for the logic so far. If we wanted to make tests, here is a list of videos to use:
@@ -71,8 +75,9 @@ There are no tests for the logic so far. If we wanted to make tests, here is a l
 * `wL7tSgUpy8w` has autogen subtitles but there's only instrumental music
 * `3x1b_S6Qp2Q` for benchmarking large videos, autogen subs
 * `pTn6Ewhb27k` breaks the "timestamp, text, new line, next" pattern of autogen subtitles
-* `ZxYOEwM6Wbk` has weird duplicated subtitles
+* `ZxYOEwM6Wbk` youtube-dl exports duplicated subtitles
 
 <!-- Invisible list of references -->
 [aws-cli-install]: https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2-linux.html
 [sitemap]: https://www.sitemaps.org/protocol.html
+[aws-cli-dynamodb]: https://docs.aws.amazon.com/cli/latest/reference/dynamodb
