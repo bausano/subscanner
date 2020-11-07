@@ -1,8 +1,13 @@
 #!/bin/bash
 
-# Uploads all files in the `pages` directory to an S3 bucket using AWS CLI v2.
-# You will need to set up AWS credentials with access to the bucket. See
-# the README for more instructions.
+readonly help='
+Uploads all files in the `pages` directory to an S3 bucket using AWS CLI v2.
+You will need to set up AWS credentials with access to the bucket. See
+the README for more instructions.
+
+$ ./upload_pages_to_s3.sh ${bucket_name}
+'
+if [ "${1}" = "help" ]; then echo "${help}" && exit 0; fi
 
 if ! command -v aws &> /dev/null
 then
@@ -13,9 +18,9 @@ fi
 
 readonly DIR_TO_SYNC="pages"
 
-readonly bucket=$1
-if [ -z "${bucket}" ]; then
-    echo "Bucket name must be provided. Example: ./upload_pages_to_s3 my-bucket"
+readonly bucket_name=$1
+if [ -z "${bucket_name}" ]; then
+    echo "Bucket name must be provided. See ./upload_pages_to_s3 help"
     exit 1
 fi
 
@@ -25,12 +30,12 @@ if test -f ".env"; then
     source .env
 fi
 
-aws s3 sync "${DIR_TO_SYNC}" "s3://${bucket}" \
+aws s3 sync "${DIR_TO_SYNC}" "s3://${bucket_name}" \
     --acl "public-read" `# everyone can access since it's website` \
     --storage-class "REDUCED_REDUNDANCY" `# cheaper storage` \
     --exclude "*" --include "*.html" `# only html files` \
     --content-type "text/html" \
-    --content-encoding "gzip" `# pages are gzipped in 'gen_html_for_vid.sh' step` \
+    --content-encoding "gzip" `# pages are gzipped in 'gen_vid_page.sh' step` \
     --cache-control "public, max-age=604800, immutable" `# content never changes`
 
 echo "[$(date)] Done!"

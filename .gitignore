@@ -1,7 +1,5 @@
 *.en.vtt
 *.en.srt
 *.info.json
-pages/*.html
 .env
-!pages/index.html
-!pages/error.html
+.vscode

@@ -20,12 +20,9 @@ section.content {
     margin: auto;
 }
 
-section.content .subtitle {
-    display: flex;
-    flex-direction: column-reverse;
-}
-
 section.content .subtitle .timestamp {
+    font-size: 70%;
+
     /* https://stackoverflow.com/questions/6900124/how-to-make-certain-text-not-selectable-with-css */
     -webkit-user-select: none;
     -moz-user-select: none;
@@ -56,5 +53,6 @@ section.content .subtitle time {
         /* Pull timestamp to the left on desktop. */
         transform: translateX(-110%);
         position: absolute;
+        font-size: 100%;
     }
 }

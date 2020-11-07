@@ -1,27 +1,15 @@
 #!/bin/bash
 
-# Downloads video subtitles from YouTube with youtube-dl and formats them into
-# html. Uses template.html file to replace placeholders and stores the result in
-# another html file.
-#
-# # Usage
-#
-# ```
-# $ ./gen_html_for_vid.sh ${video_id}
-# ```
+source lib.sh
 
-function check_dependency {
-    ## Checks that dependency is installed, otherwise exits.
+readonly help='
+Downloads video subtitles from YouTube with youtube-dl and formats them into
+html. Uses template.html file to replace placeholders and stores the result
+in another html file.
 
-    local dep=$1
-
-    if ! command -v $dep &> /dev/null
-    then
-        echo "${dep} is missing"
-        echo "\$ sudo apt-get install ${dep}"
-        exit 1
-    fi
-}
+$ ./gen_vid_page.sh ${video_id}
+'
+if [ "${1}" = "help" ]; then echo "${help}" && exit 0; fi
 
 check_dependency "youtube-dl"
 check_dependency "jq"
@@ -39,7 +27,7 @@ readonly DISPLAY_TIMESTAMP_EVERY_N_S=20
 # first arg is famous "?v=" query param
 readonly video_id=$1
 if [ -z "${video_id}" ]; then
-    echo "Video id must be provided. Example: ./gen_html_for_vid MBnnXbOM5S4"
+    echo "Video id must be provided. See ./gen_vid_page help"
     exit 1
 fi
 
@@ -62,14 +50,22 @@ function download_video_subtitles {
         ## or manmade subs.
 
         # Can be either "--write-sub" or "--write-auto-sub".
-        local sub_flag=$1
+        local -r sub_flag=$1
 
-        local success_msg="Writing video subtitles"
-
-        # --id stores file with video id in name
+        # --id              stores file with video id in name
         # --write-info-json creates a new json file with video metadata which
         #                   we use to get title, tags, thumbbnail, ...
-        result_download_subs=$(youtube-dl --retries 50 --id --write-info-json --skip-download --sub-lang en "${sub_flag}" "${video_url}")
+        # --skip-download  to avoid video download
+        local -r result_download_subs=$(youtube-dl \
+            --id \
+            --retries 50 \
+            --write-info-json \
+            --skip-download \
+            --sub-lang en \
+            "${sub_flag}" \
+            "${video_url}")
+
+        local -r success_msg="Writing video subtitles"
         if [[ "${result_download_subs}" == *"${success_msg}"* ]]; then
             return 0
         fi
@@ -94,22 +90,22 @@ function replace_template_placeholders {
     echo "[$(date)] Replacing template placeholders..."
 
     # get info from youtube-dl created json
-    local info_json=$( jq -c '.' "${info_file_name}" )
+    local -r info_json=$( jq -c '.' "${info_file_name}" )
 
     # replace "video_$PROP_prop" keys with values from info json
-    local properties=(
+    local -r properties=(
         id title thumbnail webpage_url
         uploader channel_url
     )
     for prop in "${properties[@]}"
     do
-        prop_value=$( jq -r -c ".$prop" <<< $info_json )
+        local prop_value=$( jq -r -c ".$prop" <<< $info_json )
         html_mut=${html_mut//"video_${prop}_prop"/"${prop_value}"}
     done
 
     # build keywords by removing quotes and square brackets from json array
-    local tags=$( jq -r -c ".tags" <<< $info_json | sed 's/\"//g' )
-    local categories=$( jq -r -c ".categories" <<< $info_json | sed 's/\"//g' )
+    local -r tags=$( jq -r -c ".tags" <<< $info_json | sed 's/\"//g' )
+    local -r categories=$( jq -r -c ".categories" <<< $info_json | sed 's/\"//g' )
     html_mut=${html_mut/video_keywords_prop/"${categories:1:-1},${tags:1:-1}"}
 }
 
@@ -125,7 +121,7 @@ function parse_subtitles_file {
     function time_to_int {
         ## Converts double digit number such as hours, minutes, seconds.
 
-        local number=$1
+        local -r number=$1
 
         if [[ ${number} = 0* ]]; then
             return ${number:1}
@@ -138,10 +134,10 @@ function parse_subtitles_file {
         ## Given seconds into the video and timestamp, generate timeline and
         ## subtitle html.
 
-        local appear_at_sec=$1
-        local hh_mm_ss=$2
-        local text=$3
-        local display_timestamp=$4
+        local -r appear_at_sec=$1
+        local -r hh_mm_ss=$2
+        local -r text=$3
+        local -r display_timestamp=$4
 
         transcript_mut+="<div class=\"subtitle\">"
 
@@ -159,15 +155,15 @@ function parse_subtitles_file {
         transcript_mut+="</div>"
     }
 
-    next_index=2
-    last_line=""
+    local next_index=2
+    local last_line=""
     while read -r timespan; do
         # reads until timespan and stores groups in `$BASH_REMATCH`
         if [[ ! ${timespan} =~ $MATCH_TIMESPAN ]]; then
             continue
         fi
 
-        text_mut=""
+        local text_mut=""
         while read -r nline; do
             # trim spaces
             nline="${nline#"${nline%%[![:space:]]*}"}"
@@ -194,18 +190,20 @@ function parse_subtitles_file {
         done
 
         # when subs start?
-        s_hh="${BASH_REMATCH[1]}"
-        s_mm="${BASH_REMATCH[2]}"
-        s_ss="${BASH_REMATCH[3]}"
-        s_hh_mm_ss="${s_hh}:${s_mm}:${s_ss}"
-        time_to_int ${s_hh}; s_hours=$?
-        time_to_int ${s_mm}; s_minutes=$?
-        time_to_int ${s_ss}; s_seconds=$?
-        curr_subs_appeared_at_sec="$(($s_hours * 3600 + $s_minutes * 60 + $s_seconds))"
+        local s_hh="${BASH_REMATCH[1]}"
+        local s_mm="${BASH_REMATCH[2]}"
+        local s_ss="${BASH_REMATCH[3]}"
+        local s_hh_mm_ss="${s_hh}:${s_mm}:${s_ss}"
+        time_to_int ${s_hh}; local s_hours=$?
+        time_to_int ${s_mm}; local s_minutes=$?
+        time_to_int ${s_ss}; local s_seconds=$?
+        local curr_subs_appeared_at_sec=$((
+            $s_hours * 3600 + $s_minutes * 60 + $s_seconds
+        ))
 
         # only show timestamp here and there to avoid clutter
-        display_timestamp=false
-        secs_without_timestamp=$(( $curr_subs_appeared_at_sec - $last_timestamp_displayed_at_sec ))
+        local display_timestamp=false
+        local secs_without_timestamp=$(( $curr_subs_appeared_at_sec - $last_timestamp_displayed_at_sec ))
         if [[ $secs_without_timestamp -ge $DISPLAY_TIMESTAMP_EVERY_N_S ]]; then
             display_timestamp=true
             last_timestamp_displayed_at_sec=$curr_subs_appeared_at_sec
@@ -215,9 +213,9 @@ function parse_subtitles_file {
         subtitles_html_template ${curr_subs_appeared_at_sec} ${s_hh_mm_ss} "${text_mut}" ${display_timestamp}
 
         # when subs end?
-        time_to_int ${BASH_REMATCH[4]}; e_hours=$?
-        time_to_int ${BASH_REMATCH[5]}; e_minutes=$?
-        time_to_int ${BASH_REMATCH[6]}; e_seconds=$?
+        time_to_int ${BASH_REMATCH[4]}; local e_hours=$?
+        time_to_int ${BASH_REMATCH[5]}; local e_minutes=$?
+        time_to_int ${BASH_REMATCH[6]}; local e_seconds=$?
     done <<< $(tail -n +2 "${srt_file_name}") # the first line is always index "1"
 
     # and finally attach transcript to the html
