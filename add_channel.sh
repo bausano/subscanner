@@ -71,5 +71,6 @@ aws dynamodb put-item \
         \"channel_id\": {\"S\": \"${channel_id}\"},
         \"updated_at\": {\"N\": \"$(date +%s)\"}
       }"
+abort_on_err $? "Cannot store channel in db."
 
 echo "[$(date)] Done!"

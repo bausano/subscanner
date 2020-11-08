@@ -224,6 +224,11 @@ download_video_subtitles # (and meta info) to disk
 replace_template_placeholders # with values from meta info json file
 parse_subtitles_file # and store results in "html_mut"
 
+if [ -z "${html_mut}" ]; then
+    echo "Video has no subtitles."
+    exit 1
+fi
+
 echo "[$(date)] Minifying html and storing it gzipped..."
 # file without extension makes url nicer
 echo "${html_mut}" | minify --type=html | gzip -c > "pages/${video_id}"
