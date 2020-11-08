@@ -10,6 +10,9 @@ for each video.
 * optinal `--max-concurrent integer` flag which limits how many videos are
     processed at once
 
+Adds channel into db and generates pages, but you need to publish those pages
+with `upload_pages_to_s3.sh`.
+
 $ ./gen_channel_vids_pages.sh ${channel_id} \
     [--since "yyyy-mm-dd"] \
     [--max-concurrent 4]
@@ -44,16 +47,16 @@ for key in "$@"; do
     shift
 done
 
-dateafter=""
-if [ -n "${since}" ]; then
-    dateafter="--dateafter ${since//-/}"
-fi
-
-echo "[$(date)] Scanning videos..."
 # takes a while
 # FIXME(https://github.com/bausano/yt-search/issues/9)
-# FIXME(https://github.com/bausano/yt-search/issues/10)
-readonly ids=$( youtube-dl --get-id ${dateafter} "${channel_url}" )
+if [ -n "${since}" ]; then
+    echo "[$(date)] Scanning videos since ${since}..."
+    since_no_dash="${since//-/}"
+    ids=$( youtube-dl --get-id --dateafter "${since_no_dash}" "${channel_url}" )
+else
+    echo "[$(date)] Scanning all videos..."
+    ids=$( youtube-dl --get-id "${channel_url}" )
+fi
 abort_on_err $? "Cannot get channel video ids"
 
 echo "[$(date)] Downloading subs for following vids:"
@@ -71,7 +74,7 @@ do
     done
 
     # in background and prepend stdout with vid id
-    # FIXME: what happens if a job fails
+    # FIXME(https://github.com/bausano/yt-search/issues/13)
     ./gen_vid_page.sh "${video_id}" | sed 's/^/['"${video_id}"'] /' &
 done <<< "${ids}"
 

@@ -55,7 +55,7 @@ if test -f ".env"; then
 fi
 
 # reads all gen pages, return only file names (no /pages path)
-readonly pages=$(find pages/*.html -not -path pages/template.html -printf "%f\n")
+readonly pages=$(find pages/* -not -path pages/template.html -printf "%f\n")
 if [[ ${#pages} -eq 0 ]]; then
     echo "No pages to upload."
     exit 1
@@ -91,20 +91,21 @@ aws s3 cp \
     --acl "public-read"
 abort_on_err $? "Cannot copy sitemap"
 
+# FIXME: maybe I don't need public-read because it's a static website
 echo "[$(date)] Uploading all pages..."
 aws s3 sync "${PAGES_DIR_TO_SYNC}" "s3://${bucket_name}" \
     --acl "public-read" `# everyone can access since it's website` \
     --storage-class "REDUCED_REDUNDANCY" `# cheaper storage` \
-    --exclude "*" --include "*.html" `# only html files` \
-    --exclude "template.html" \
+    --exclude ".gitignore" --exclude "template.html" `# only html pages` \
     --content-type "text/html" \
     --content-encoding "gzip" `# pages are gzipped in 'gen_vid_page.sh' step` \
     --cache-control "public, max-age=604800, immutable" `# content never changes`
+abort_on_err $? "Cannot upload pages"
 
 echo "[$(date)] Removing local page copies..."
-(
-    cd pages
-    rm ${pages}
-)
+while read html_file_name;
+do
+    rm "./pages/${html_file_name}"
+done <<< "${pages}"
 
 echo "[$(date)] Done!"

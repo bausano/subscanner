@@ -10,12 +10,21 @@ header.header {
     margin-bottom: 2rem;
 }
 
+header.header .cookies {
+    font-size: 75%;
+}
+
 header.header .thumbnail img {
     width: 100%;
     max-width: 800px;
 }
 
 section.content {
+    width: 100%;
+    margin: auto;
+}
+
+section.ad {
     width: 100%;
     margin: auto;
 }
@@ -46,6 +55,10 @@ section.content .subtitle time {
     }
 
     section.content {
+        width: 960px;
+    }
+
+    section.ad {
         width: 960px;
     }
 

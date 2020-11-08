@@ -78,8 +78,8 @@ function download_video_subtitles {
     abort_on_err $? "Subtitles for ${video_id} cannot be downloaded."
 
     # convert vtt to srt, better format to parse
-    # FIXME(https://github.com/bausano/yt-search/issues/11)
-    ffmpeg -y -i "${vtt_file_name}" "${srt_file_name}" > /dev/null 2>&1
+    # use `./` for filenames beginning with dash
+    ffmpeg -y -i "./${vtt_file_name}" "./${srt_file_name}" > /dev/null 2>&1
     abort_on_err $? "Subtitles for ${video_id} cannot be converted."
 }
 
@@ -88,7 +88,7 @@ function replace_template_placeholders {
     echo "[$(date)] Replacing template placeholders..."
 
     # get info from youtube-dl created json
-    local -r info_json=$( jq -c '.' "${info_file_name}" )
+    local -r info_json=$( jq -c '.' "./${info_file_name}" )
 
     # replace "video_$PROP_prop" keys with values from info json
     local -r properties=(
@@ -214,7 +214,7 @@ function parse_subtitles_file {
         time_to_int ${BASH_REMATCH[4]}; local e_hours=$?
         time_to_int ${BASH_REMATCH[5]}; local e_minutes=$?
         time_to_int ${BASH_REMATCH[6]}; local e_seconds=$?
-    done <<< $(tail -n +2 "${srt_file_name}") # the first line is always index "1"
+    done <<< $(tail -n +2 "./${srt_file_name}") # the first line is always index "1"
 
     # and finally attach transcript to the html
     html_mut=${html_mut/video_transcript_prop/${transcript_mut}}
@@ -224,12 +224,12 @@ download_video_subtitles # (and meta info) to disk
 replace_template_placeholders # with values from meta info json file
 parse_subtitles_file # and store results in "html_mut"
 
-# Minifies the html, gzips it and stores it in a file.
 echo "[$(date)] Minifying html and storing it gzipped..."
-echo "${html_mut}" | minify --type=html | gzip -c > "pages/${video_id}.html"
+# file without extension makes url nicer
+echo "${html_mut}" | minify --type=html | gzip -c > "pages/${video_id}"
 abort_on_err $? "Html cannot be stored."
 
 # delete temp downloads
-rm -rf "${info_file_name}" "${vtt_file_name}" "${srt_file_name}"
+rm -rf "./${info_file_name}" "./${vtt_file_name}" "./${srt_file_name}"
 
 echo "[$(date)] Done!"
