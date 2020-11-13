@@ -55,7 +55,7 @@ if test -f ".env"; then
 fi
 
 # reads all gen pages, return only file names (no /pages path)
-readonly pages=$(find pages/* -not -path pages/template.html -printf "%f\n")
+readonly pages=$(find pages/*.html -not -path pages/template.html -printf "%f\n")
 if [[ ${#pages} -eq 0 ]]; then
     echo "No pages to upload."
     exit 1

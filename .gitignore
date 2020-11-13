@@ -1,5 +1,2 @@
-*.en.vtt
-*.en.srt
-*.info.json
 .env
 .vscode

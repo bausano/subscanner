@@ -14,6 +14,12 @@ header.header .cookies {
     font-size: 75%;
 }
 
+/* By default we hide cookie banner. If ads are enabled, we show it again with
+   javascript. */
+header.header #cookies {
+    visibility: hidden;
+}
+
 header.header .thumbnail img {
     width: 100%;
     max-width: 800px;

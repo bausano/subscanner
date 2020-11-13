@@ -4,6 +4,8 @@ At the moment of writing the app, there is no way to search YouTube video conten
 
 An app which scrapes YouTube subtitles APIs and creates an html file with the transcript. The html files are uploaded to an S3 bucket. The content is indexed by search engines.
 
+We only scrape subs written by human as auto generated subtitles are of poor quality.
+
 ## Dependencies
 You must have `youtube-dl` utility installed to fetch the subs and `jq` to query info json file. Then `minify` for html size reduction and `gzip` to serve gzip file to clients. We use `ffmpeg` to convert from `vtt` to `srt` which is much easier to parse.
 
@@ -97,15 +99,7 @@ $ ./gen_channel_vids_pages.sh ${channel_id} \
 
 We pull all videos from channel and generate pages for them. This functionality is used when we add new channel (without `--since` flag) and when we scrape new videos of existing channels periodically (with `--since` flag).
 
-## Test videos
-There are no tests for the logic so far. If we wanted to make tests, here is a list of videos to use:
-* `MBnnXbOM5S4` control example
-* `wL7tSgUpy8w` has autogen subtitles but there's only instrumental music
-* `3x1b_S6Qp2Q` for benchmarking large videos, autogen subs
-* `pTn6Ewhb27k` breaks the "timestamp, text, new line, next" pattern of autogen subtitles
-* `ZxYOEwM6Wbk` youtube-dl exports duplicated subtitles
-
-<!-- Invisible list of references -->
+<!-- References -->
 [aws-cli-install]: https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2-linux.html
 [sitemap]: https://www.sitemaps.org/protocol.html
 [aws-cli-dynamodb]: https://docs.aws.amazon.com/cli/latest/reference/dynamodb

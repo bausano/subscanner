@@ -23,6 +23,7 @@ readonly D="[[:digit:]]"
 readonly MATCH_TIMESPAN="^($D{2}):($D{2}):($D{2}),$D{3}\s-->\s($D{2}):($D{2}):($D{2})"
 # don't display timestamp all the time (clutters page)
 readonly DISPLAY_TIMESTAMP_EVERY_N_S=20
+readonly OUTPUT_PATH="output"
 
 # first arg is famous "?v=" query param
 readonly video_id=$1
@@ -32,9 +33,9 @@ if [ -z "${video_id}" ]; then
 fi
 
 readonly video_url="https://www.youtube.com/watch?v=${video_id}"
-readonly info_file_name="${video_id}.info.json"
-readonly vtt_file_name="${video_id}.en.vtt"
-readonly srt_file_name="${video_id}.en.srt"
+readonly info_file_path="${OUTPUT_PATH}/${video_id}.info.json"
+readonly vtt_file_path="${OUTPUT_PATH}/${video_id}.en.vtt"
+readonly srt_file_path="${OUTPUT_PATH}/${video_id}.en.srt"
 
 # will be stored as a file
 html_mut=$(cat $HTML_TEMPLATE_PATH)
@@ -45,24 +46,22 @@ function download_video_subtitles {
     ## Given video id downloads subtitles to disk and returns path to the file.
     echo "[$(date)] Downloading subs for ${video_id}..."
 
-    function youtube_dl {
-        ## Runs youtube-dl to get subtitles. Can be parametrized to get auto
-        ## or manmade subs.
-
-        # Can be either "--write-sub" or "--write-auto-sub".
-        local -r sub_flag=$1
+    function download_subs {
+        ## Runs youtube-dl to get subtitles.
 
         # --id              stores file with video id in name
         # --write-info-json creates a new json file with video metadata which
         #                   we use to get title, tags, thumbbnail, ...
-        # --skip-download  to avoid video download
+        # --skip-download   to avoid video download
+        # --write-sub       only human written subs
         local -r result_download_subs=$(youtube-dl \
             --id \
             --retries 50 \
             --write-info-json \
             --skip-download \
             --sub-lang en \
-            "${sub_flag}" \
+            --write-sub \
+            --output "${OUTPUT_PATH}/%(id)s.%(ext)s" \
             "${video_url}")
 
         local -r success_msg="Writing video subtitles"
@@ -73,13 +72,13 @@ function download_video_subtitles {
         return 1
     }
 
-    # attempt download manmade subs or fallback to autogen
-    youtube_dl --write-sub || youtube_dl --write-auto-sub
+    # attempt download manmade subs
+    download_subs --write-sub
     abort_on_err $? "Subtitles for ${video_id} cannot be downloaded."
 
     # convert vtt to srt, better format to parse
     # use `./` for filenames beginning with dash
-    ffmpeg -y -i "./${vtt_file_name}" "./${srt_file_name}" > /dev/null 2>&1
+    ffmpeg -y -i "./${vtt_file_path}" "./${srt_file_path}" > /dev/null 2>&1
     abort_on_err $? "Subtitles for ${video_id} cannot be converted."
 }
 
@@ -88,7 +87,7 @@ function replace_template_placeholders {
     echo "[$(date)] Replacing template placeholders..."
 
     # get info from youtube-dl created json
-    local -r info_json=$( jq -c '.' "./${info_file_name}" )
+    local -r info_json=$( jq -c '.' "./${info_file_path}" )
 
     # replace "video_$PROP_prop" keys with values from info json
     local -r properties=(
@@ -214,7 +213,7 @@ function parse_subtitles_file {
         time_to_int ${BASH_REMATCH[4]}; local e_hours=$?
         time_to_int ${BASH_REMATCH[5]}; local e_minutes=$?
         time_to_int ${BASH_REMATCH[6]}; local e_seconds=$?
-    done <<< $(tail -n +2 "./${srt_file_name}") # the first line is always index "1"
+    done <<< $(tail -n +2 "./${srt_file_path}") # the first line is always index "1"
 
     # and finally attach transcript to the html
     html_mut=${html_mut/video_transcript_prop/${transcript_mut}}
@@ -224,8 +223,11 @@ download_video_subtitles # (and meta info) to disk
 replace_template_placeholders # with values from meta info json file
 parse_subtitles_file # and store results in "html_mut"
 
+# trim spaces
+html_mut="${html_mut#"${html_mut%%[![:space:]]*}"}"
+html_mut="${html_mut%"${html_mut##*[![:space:]]}"}"
 if [ -z "${html_mut}" ]; then
-    echo "Video has no subtitles."
+    echo "[$(date)] Video has no subtitles."
     exit 1
 fi
 
@@ -235,6 +237,6 @@ echo "${html_mut}" | minify --type=html | gzip -c > "pages/${video_id}"
 abort_on_err $? "Html cannot be stored."
 
 # delete temp downloads
-rm -rf "./${info_file_name}" "./${vtt_file_name}" "./${srt_file_name}"
+rm -rf "./${info_file_path}" "./${vtt_file_path}" "./${srt_file_path}"
 
 echo "[$(date)] Done!"
