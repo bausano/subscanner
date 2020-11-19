@@ -7,7 +7,7 @@ An app which scrapes YouTube subtitles APIs and creates an html file with the tr
 We only scrape subs written by human as auto generated subtitles are of poor quality.
 
 ## Dependencies
-You must have `youtube-dl` utility installed to fetch the subs and `jq` to query info json file. Then `minify` for html size reduction and `gzip` to serve gzip file to clients. We use `ffmpeg` to convert from `vtt` to `srt` which is much easier to parse.
+You must have [`youtube-dl`](youtube-dl) utility installed to fetch the subs and `jq` to query info json file. Then `minify` for html size reduction and `gzip` to serve gzip file to clients. We use `ffmpeg` to convert from `vtt` to `srt` which is much easier to parse.
 
 ```bash
 $ apt-get install -y youtube-dl jq minify gzip ffmpeg
@@ -114,6 +114,7 @@ youtube-dl --simulate --get-filename -o '%(upload_date)s.%(id)s' ${channel_id}
 ```
 
 <!-- References -->
+[youtube-dl]: https://github.com/ytdl-org/youtube-dl
 [aws-cli-install]: https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2-linux.html
 [sitemap]: https://www.sitemaps.org/protocol.html
 [aws-cli-dynamodb]: https://docs.aws.amazon.com/cli/latest/reference/dynamodb
