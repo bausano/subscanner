@@ -20,10 +20,12 @@ $ aws --version
 aws-cli/2.0.61
 ```
 
-You might need to grant +x to the bash scripts.
+You might need to grant executable permission to the bash scripts.
 
 ```bash
-$ chmod +x add_channel.sh gen_vid_page.sh upload_pages_to_s3.sh gen_channel_vids_pages.sh retry_failed_downloads.sh
+$ chmod +x add_channel.sh \
+    gen_channel_vids_pages.sh gen_vid_page.sh \
+    retry_failed_downloads.sh upload_pages_to_s3.sh
 ```
 
 ## How it works
