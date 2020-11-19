@@ -10,7 +10,7 @@ Generates pages for all channel vids and adds channel to db.
     processed at once
 
 $ ./add_channel.sh ${channel_id} \
-    --db ${db_name} \
+    --db yt_channels \
     [--max-concurrent 4]
 '
 if [ "${1}" = "help" ]; then echo "${help}" && exit 0; fi
@@ -60,11 +60,11 @@ if [ $already_exists -eq 1 ]; then
 fi
 
 # scrape all vids to date
-echo "[$(date)] Scraping channel videos..."
+echo "[`date`] Scraping channel videos..."
 ./gen_channel_vids_pages.sh "${channel_id}" --max-concurrent "${max_concurrent}"
 abort_on_err $? "Videos for channel ${channel_id} cannot be created."
 
-echo "[$(date)] Inserting channel to db..."
+echo "[`date`] Inserting channel to db..."
 aws dynamodb put-item \
     --table-name "${db_name}" \
     --item "{
@@ -73,4 +73,4 @@ aws dynamodb put-item \
       }"
 abort_on_err $? "Cannot store channel in db."
 
-echo "[$(date)] Done!"
+echo "[`date`] Done!"

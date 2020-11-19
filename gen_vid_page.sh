@@ -23,7 +23,6 @@ readonly D="[[:digit:]]"
 readonly MATCH_TIMESPAN="^($D{2}):($D{2}):($D{2}),$D{3}\s-->\s($D{2}):($D{2}):($D{2})"
 # don't display timestamp all the time (clutters page)
 readonly DISPLAY_TIMESTAMP_EVERY_N_S=20
-readonly OUTPUT_PATH="output"
 
 # first arg is famous "?v=" query param
 readonly video_id=$1
@@ -44,7 +43,7 @@ transcript_mut=""
 
 function download_video_subtitles {
     ## Given video id downloads subtitles to disk and returns path to the file.
-    echo "[$(date)] Downloading subs for ${video_id}..."
+    echo "[`date`] Downloading subs for ${video_id}..."
 
     function download_subs {
         ## Runs youtube-dl to get subtitles.
@@ -83,7 +82,7 @@ function download_video_subtitles {
 
 function replace_template_placeholders {
     ## Gets info from metadata file and replaces placeholders in "html_mut".
-    echo "[$(date)] Replacing template placeholders..."
+    echo "[`date`] Replacing template placeholders..."
 
     # get info from youtube-dl created json
     local -r info_json=$( jq -c '.' "./${info_file_path}" )
@@ -108,7 +107,7 @@ function replace_template_placeholders {
 function parse_subtitles_file {
     ## Loads and parses subs, puts results into html. This function mutates
     ## parameter "html_mut".
-    echo "[$(date)] Parsing subs file..."
+    echo "[`date`] Parsing subs file..."
 
     # keeps track of when last <time> tag was displayed
     # display <time> only once in a while to avoid cluttering
@@ -226,11 +225,11 @@ parse_subtitles_file # and store results in "html_mut"
 html_mut="${html_mut#"${html_mut%%[![:space:]]*}"}"
 html_mut="${html_mut%"${html_mut##*[![:space:]]}"}"
 if [ -z "${html_mut}" ]; then
-    echo "[$(date)] Video has no subtitles."
+    echo "[`date`] Video has no subtitles."
     exit 1
 fi
 
-echo "[$(date)] Minifying html and storing it gzipped..."
+echo "[`date`] Minifying html and storing it gzipped..."
 # file without extension makes url nicer
 echo "${html_mut}" | minify --type=html | gzip -c > "pages/${video_id}"
 abort_on_err $? "Html cannot be stored."
@@ -238,4 +237,4 @@ abort_on_err $? "Html cannot be stored."
 # delete temp downloads
 rm -rf "./${info_file_path}" "./${vtt_file_path}" "./${srt_file_path}"
 
-echo "[$(date)] Done!"
+echo "[`date`] Done!"

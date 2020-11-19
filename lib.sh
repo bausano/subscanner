@@ -4,6 +4,8 @@
 
 # https://stackoverflow.com/questions/6180138/whats-the-maximum-length-of-a-youtube-video-id
 export VIDEO_ID_LENGTH=11
+# directory where to write output files from youtube-dl
+export OUTPUT_PATH="tmp"
 
 function check_dependency {
     ## Checks that dependency is installed, otherwise exits.
@@ -35,7 +37,7 @@ function abort_on_err {
     local err_msg=$2
 
     if [[ $status != 0 ]]; then
-        echo "[$(date)] ERR $status: ${err_msg}"
+        echo "[`date`] ERR $status: ${err_msg}"
         exit $status
     fi
 }

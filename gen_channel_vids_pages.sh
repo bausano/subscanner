@@ -47,11 +47,11 @@ done
 # prepares cmd to execute which pulls channel videos and prints them line after
 # line
 if [ -n "${since}" ]; then
-    echo "[$(date)] Scanning videos since ${since}..."
+    echo "[`date`] Scanning videos since ${since}..."
     since_no_dash="${since//-/}"
     channel_vids_stream="youtube-dl --get-id --dateafter ${since_no_dash} ${channel_url}"
 else
-    echo "[$(date)] Scanning all videos..."
+    echo "[`date`] Scanning all videos..."
     channel_vids_stream="youtube-dl --get-id ${channel_url}"
 fi
 
@@ -59,7 +59,6 @@ fi
 # youtube-dl instead of waiting for the fetching process to finish
 eval "$channel_vids_stream" \
 | while read -r video_id; do
-    echo "xd ${video_id}"
     if [[ ! ${#video_id} -eq ${VIDEO_ID_LENGTH} ]]; then
         continue
     fi
@@ -77,4 +76,4 @@ done
 # await all jobs
 for job in `jobs -p`; do wait ${job}; done
 
-echo "[$(date)] Done!"
+echo "[`date`] Done!"

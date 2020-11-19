@@ -1,10 +1,8 @@
 # yt-search
 
-At the moment of writing the app, there is no way to search YouTube video content.
+At the moment of writing the app, there is no way to search YouTube video content as its not indexed by browsers. The solution to this problem is an app which scrapes YouTube subtitles APIs and creates an html file with the transcript. The html files are uploaded to an S3 bucket. The content is indexed by search engines.
 
-An app which scrapes YouTube subtitles APIs and creates an html file with the transcript. The html files are uploaded to an S3 bucket. The content is indexed by search engines.
-
-We only scrape subs written by human as auto generated subtitles are of poor quality.
+We only scrape subs written by humans as auto generated subtitles are of poor quality.
 
 ## Dependencies
 You must have [`youtube-dl`](youtube-dl) utility installed to fetch the subs and `jq` to query info json file. Then `minify` for html size reduction and `gzip` to serve gzip file to clients. We use `ffmpeg` to convert from `vtt` to `srt` which is much easier to parse.
@@ -33,11 +31,11 @@ Each script accepts `help` as first argument, in which case it will print its do
 
 ### Persistence
 ```bash
-$ ./add_channel.sh ${channel_id} --db ${ddb_name} [--max-concurrency 4]
+$ ./add_channel.sh ${channel_id} --db ${ddb_name} [--max-concurrent 4]
 ```
 * **`channel_id`** is id of youtube channel as found in `youtube.com/channel/${channel_od}` (NOT the channel name in `youtube.com/c/${channel_name}`)
 * **`--db`** flag is for name of AWS DynamoDB table which stores timestamp of channel last scape
-* **`--max-concurrency`** flag is for how many videos to download at once (default 4)
+* **`--max-concurrent`** flag is for how many videos to download at once (default 4)
 
 ---
 
@@ -94,7 +92,7 @@ $ ./gen_channel_vids_pages.sh ${channel_id} \
 ```
 * **`channel_id`** is id of youtube channel as found in `youtube.com/channel/${channel_od}` (NOT the channel name in `youtube.com/c/${channel_name}`)
 * **`--since`** flag is to filter youtube videos which are older than provided date
-* **`--max-concurrency`** flag is for how many videos to download at once (default 4)
+* **`--max-concurrent`** flag is for how many videos to download at once (default 4)
 
 ---
 
@@ -102,12 +100,13 @@ We pull all videos from channel and generate pages for them. This functionality 
 
 ### Fault tolerance
 ```bash
-$ ./retry_failed_downloads.sh
+$ ./retry_failed_downloads.sh [--max-concurrent 4]
 ```
+* **`--max-concurrent`** flag is for how many videos to download at once (default 4)
 
 ---
 
-The youtube-dl info file is stored in a `output` directory. If for some reason we fail to generate page for a video, the info file is not cleaned up. When adequate, we use the retry script to read all those info files and retry generating page for each video. Then regardless of whether the operation succeeds we remove the info file.
+The youtube-dl info file is stored in a `tmp` directory (within this repo). If for some reason we fail to generate page for a video, the info file is not cleaned up. When adequate, we use the retry script to read all those info files and retry generating page for each video. Then regardless of whether the operation succeeds we remove the info file.
 
 ## Cheatsheet
 ```bash

@@ -11,7 +11,7 @@ the README for more instructions.
     videos to (if the file does not exist we create new one)
 * flag `--domain` with the domain name, used for sitemap links
 
-$ ./upload_pages_to_s3.sh ${bucket_name} --sitemap "sitemap1.xml"
+$ ./upload_pages_to_s3.sh subscanner.com --domain "subscanner.com" --sitemap "sitemap1.xml"
 '
 if [ "${1}" = "help" ]; then echo "${help}" && exit 0; fi
 
@@ -55,7 +55,10 @@ if test -f ".env"; then
 fi
 
 # reads all gen pages, return only file names (no /pages path)
-readonly pages=$(find pages/*.html -not -path pages/template.html -printf "%f\n")
+readonly pages=$(find pages/* \
+    -not -path pages/template.html \
+    -not -path pages/README.md \
+    -printf "%f\n")
 if [[ ${#pages} -eq 0 ]]; then
     echo "No pages to upload."
     exit 1
@@ -67,10 +70,10 @@ aws s3 cp "s3://${bucket_name}/${sitemap_file}" "sitemaps"
 # https://stackoverflow.com/q/4881930/5093093
 # if exists read all but last line, which means closing </urlset> is dropped
 if [[ $? == 0 ]]; then
-    echo "[$(date)] Downloaded sitemap"
+    echo "[`date`] Downloaded sitemap"
     sitemap_content_mut=$(head -n -1 "sitemaps/${sitemap_file}")
 else
-    echo "[$(date)] Creating new sitemap"
+    echo "[`date`] Creating new sitemap"
     sitemap_content_mut=$(head -n -1 "sitemaps/template.xml")
 fi
 
@@ -83,7 +86,7 @@ done <<< "${pages}"
 sitemap_content_mut+=$'\n</urlset>'
 
 # stores the file and copies it to S3
-echo "[$(date)] Uploading sitemap..."
+echo "[`date`] Uploading sitemap..."
 echo "${sitemap_content_mut}" > "sitemaps/${sitemap_file}"
 aws s3 cp \
     "sitemaps/${sitemap_file}" \
@@ -92,7 +95,7 @@ aws s3 cp \
 abort_on_err $? "Cannot copy sitemap"
 
 # FIXME: maybe I don't need public-read because it's a static website
-echo "[$(date)] Uploading all pages..."
+echo "[`date`] Uploading all pages..."
 aws s3 sync "${PAGES_DIR_TO_SYNC}" "s3://${bucket_name}" \
     --acl "public-read" `# everyone can access since it's website` \
     --storage-class "REDUCED_REDUNDANCY" `# cheaper storage` \
@@ -102,10 +105,10 @@ aws s3 sync "${PAGES_DIR_TO_SYNC}" "s3://${bucket_name}" \
     --cache-control "public, max-age=604800, immutable" `# content never changes`
 abort_on_err $? "Cannot upload pages"
 
-echo "[$(date)] Removing local page copies..."
+echo "[`date`] Removing local page copies..."
 while read html_file_name;
 do
     rm "./pages/${html_file_name}"
 done <<< "${pages}"
 
-echo "[$(date)] Done!"
+echo "[`date`] Done!"
