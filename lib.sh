@@ -2,6 +2,9 @@
 
 ### Library with helper functions.
 
+# https://stackoverflow.com/questions/6180138/whats-the-maximum-length-of-a-youtube-video-id
+export VIDEO_ID_LENGTH=11
+
 function check_dependency {
     ## Checks that dependency is installed, otherwise exits.
 

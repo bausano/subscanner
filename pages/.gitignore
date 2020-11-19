@@ -1,2 +1,4 @@
-*.html
+*
+!.gitignore
+!README.md
 !template.html

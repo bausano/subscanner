@@ -9,29 +9,28 @@ We only scrape subs written by human as auto generated subtitles are of poor qua
 ## Dependencies
 You must have `youtube-dl` utility installed to fetch the subs and `jq` to query info json file. Then `minify` for html size reduction and `gzip` to serve gzip file to clients. We use `ffmpeg` to convert from `vtt` to `srt` which is much easier to parse.
 
-```
+```bash
 $ apt-get install -y youtube-dl jq minify gzip ffmpeg
 ```
 
 You must [install AWS CLI][aws-cli-install] and [configure your environment](#publishing-to-web).
 
-```
+```bash
 $ aws --version
 aws-cli/2.0.61
 ```
 
 You might need to grant +x to the bash scripts.
 
-```
-$ chmod +x list_channel_vids.sh gen_vid_page.sh upload_pages_to_s3.sh
+```bash
+$ chmod +x add_channel.sh gen_vid_page.sh upload_pages_to_s3.sh gen_channel_vids_pages.sh retry_failed_downloads.sh
 ```
 
 ## How it works
 Each script accepts `help` as first argument, in which case it will print its documentation and exit.
 
 ### Persistence
-
-```
+```bash
 $ ./add_channel.sh ${channel_id} --db ${ddb_name} [--max-concurrency 4]
 ```
 * **`channel_id`** is id of youtube channel as found in `youtube.com/channel/${channel_od}` (NOT the channel name in `youtube.com/c/${channel_name}`)
@@ -47,7 +46,7 @@ The `add_channel.sh` script is used to add new entries to db. It will scrape all
 Should we want to access list of all videos we've scraped, we can list the objects in the S3 bucket. However this level of granularity is not necessary.
 
 ### Publishing to web
-```
+```bash
 $ ./upload_pages_to_s3.sh ${bucket} --domain ${domain_name} --sitemap ${sitemap_file_name_on_s3}
 ```
 * **`bucket`** is name of AWS S3 bucket to upload the generated html files located in `pages` dir to
@@ -70,7 +69,7 @@ To upload to S3 credentials must be provided. There are several options:
 Updating static files like the `style.css`, `index.html` or `error.html` is currently manual. Since these files won't change very often automation is not an attractive option.
 
 ### Preparing html
-```
+```bash
 $ ./gen_vid_page.sh ${video_id}
 ```
 * **`video_id`** is the value of `v=` query param in `https://www.youtube.com/watch?v=${video_id}`
@@ -86,7 +85,7 @@ We use `ffmpeg` to convert `vtt` into `srt` which is easier to parse. Each subti
 We write the output to an html file `${video_id}.html` after minimizing it (~ 50% off) and gzip-ing it (~ 80% off).
 
 ### Pulling channel videos
-```
+```bash
 $ ./gen_channel_vids_pages.sh ${channel_id} \
     [--since ${yyyy-mm-dd}] \
     [--max-concurrent 4]
@@ -98,6 +97,21 @@ $ ./gen_channel_vids_pages.sh ${channel_id} \
 ---
 
 We pull all videos from channel and generate pages for them. This functionality is used when we add new channel (without `--since` flag) and when we scrape new videos of existing channels periodically (with `--since` flag).
+
+### Fault tolerance
+```bash
+$ ./retry_failed_downloads.sh
+```
+
+---
+
+The youtube-dl info file is stored in a `output` directory. If for some reason we fail to generate page for a video, the info file is not cleaned up. When adequate, we use the retry script to read all those info files and retry generating page for each video. Then regardless of whether the operation succeeds we remove the info file.
+
+## Cheatsheet
+```bash
+# print line by line video released date and id in format of YYYYMMDD.video_id
+youtube-dl --simulate --get-filename -o '%(upload_date)s.%(id)s' ${channel_id}
+```
 
 <!-- References -->
 [aws-cli-install]: https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2-linux.html
