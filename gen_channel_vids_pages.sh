@@ -21,9 +21,6 @@ if [ "${1}" = "help" ]; then echo "${help}" && exit 0; fi
 
 check_dependency "youtube-dl"
 
-# https://stackoverflow.com/questions/6180138/whats-the-maximum-length-of-a-youtube-video-id
-readonly VIDEO_ID_LENGTH=11
-
 # youtube.com/channel/${channel_id}
 readonly channel_id=$1
 if [ -z "${channel_id}" ]; then
@@ -47,22 +44,22 @@ for key in "$@"; do
     shift
 done
 
-# takes a while
-# FIXME(https://github.com/bausano/yt-search/issues/9)
+# prepares cmd to execute which pulls channel videos and prints them line after
+# line
 if [ -n "${since}" ]; then
     echo "[$(date)] Scanning videos since ${since}..."
     since_no_dash="${since//-/}"
-    ids=$( youtube-dl --get-id --dateafter "${since_no_dash}" "${channel_url}" )
+    channel_vids_stream="youtube-dl --get-id --dateafter ${since_no_dash} ${channel_url}"
 else
     echo "[$(date)] Scanning all videos..."
-    ids=$( youtube-dl --get-id "${channel_url}" )
+    channel_vids_stream="youtube-dl --get-id ${channel_url}"
 fi
-abort_on_err $? "Cannot get channel video ids"
 
-echo "[$(date)] Downloading subs for following vids:"
-echo "${ids}"
-while read video_id;
-do
+# to speed up the process we process video as soon as the id is fetched by
+# youtube-dl instead of waiting for the fetching process to finish
+eval "$channel_vids_stream" \
+| while read -r video_id; do
+    echo "xd ${video_id}"
     if [[ ! ${#video_id} -eq ${VIDEO_ID_LENGTH} ]]; then
         continue
     fi
@@ -74,9 +71,8 @@ do
     done
 
     # in background and prepend stdout with vid id
-    # FIXME(https://github.com/bausano/yt-search/issues/13)
     ./gen_vid_page.sh "${video_id}" | sed 's/^/['"${video_id}"'] /' &
-done <<< "${ids}"
+done
 
 # await all jobs
 for job in `jobs -p`; do wait ${job}; done

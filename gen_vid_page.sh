@@ -55,7 +55,6 @@ function download_video_subtitles {
         # --skip-download   to avoid video download
         # --write-sub       only human written subs
         local -r result_download_subs=$(youtube-dl \
-            --id \
             --retries 50 \
             --write-info-json \
             --skip-download \
