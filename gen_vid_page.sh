@@ -175,7 +175,7 @@ function parse_subtitles_file {
             fi
 
             # protection against duplicates
-            # (https://github.com/bausano/yt-search/issues/7)
+            # (https://github.com/bausano/subscanner/issues/7)
             if [ "${last_line}" = "${nline}" ]; then
                 continue
             fi

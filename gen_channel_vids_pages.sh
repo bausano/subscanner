@@ -72,6 +72,7 @@ eval "$channel_vids_stream" \
     # in background and prepend stdout with vid id
     ./gen_vid_page.sh "${video_id}" | sed 's/^/['"${video_id}"'] /' &
 done
+abort_on_err $? "Videos for channel ${channel_id} cannot be created."
 
 # await all jobs
 for job in `jobs -p`; do wait ${job}; done

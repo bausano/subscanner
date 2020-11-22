@@ -1,4 +1,4 @@
-# yt-search
+# subscanner
 
 At the moment of writing the app, there is no way to search YouTube video content as its not indexed by browsers. The solution to this problem is an app which scrapes YouTube subtitles APIs and creates an html file with the transcript. The html files are uploaded to an S3 bucket. The content is indexed by search engines.
 
