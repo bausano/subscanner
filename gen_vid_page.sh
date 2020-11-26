@@ -33,8 +33,9 @@ fi
 
 readonly video_url="https://www.youtube.com/watch?v=${video_id}"
 readonly info_file_path="${OUTPUT_PATH}/${video_id}.info.json"
-readonly vtt_file_path="${OUTPUT_PATH}/${video_id}.en.vtt"
-readonly srt_file_path="${OUTPUT_PATH}/${video_id}.en.srt"
+# support subs in any IETF lang tag, hence * (could be en, en-US, ...)
+readonly vtt_file_path="${OUTPUT_PATH}/${video_id}.*.vtt"
+readonly srt_file_path="${OUTPUT_PATH}/${video_id}.srt"
 
 # will be stored as a file
 html_mut=$(cat $HTML_TEMPLATE_PATH)
@@ -46,7 +47,7 @@ function download_video_subtitles {
     echo "[`date`] Downloading subs for ${video_id}..."
 
     function download_subs {
-        ## Runs youtube-dl to get subtitles.
+        ## Runs youtube-dl to get subtitles. Uses lang prefered by the channel.
 
         # --id              stores file with video id in name
         # --write-info-json creates a new json file with video metadata which
@@ -57,7 +58,6 @@ function download_video_subtitles {
             --retries 50 \
             --write-info-json \
             --skip-download \
-            --sub-lang en \
             --write-sub \
             --output "${OUTPUT_PATH}/%(id)s.%(ext)s" \
             "${video_url}")
@@ -76,7 +76,7 @@ function download_video_subtitles {
 
     # convert vtt to srt, better format to parse
     # use `./` for filenames beginning with dash
-    ffmpeg -y -i "./${vtt_file_path}" "./${srt_file_path}" > /dev/null 2>&1
+    ffmpeg -y -i ${vtt_file_path} "./${srt_file_path}" > /dev/null 2>&1
     abort_on_err $? "Subtitles for ${video_id} cannot be converted."
 }
 
@@ -235,6 +235,6 @@ echo "${html_mut}" | minify --type=html | gzip -c > "pages/${video_id}"
 abort_on_err $? "Html cannot be stored."
 
 # delete temp downloads
-rm -rf "./${info_file_path}" "./${vtt_file_path}" "./${srt_file_path}"
+rm -rf "./${info_file_path}" ${vtt_file_path} "./${srt_file_path}"
 
 echo "[`date`] Done!"

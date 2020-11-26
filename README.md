@@ -31,10 +31,10 @@ Each script accepts `help` as first argument, in which case it will print its do
 
 ### Persistence
 ```bash
-$ ./add_channel.sh ${channel_id} --db ${ddb_name} [--max-concurrent 4]
+$ ./add_channel.sh ${channel_id} [--max-concurrent 4]
 ```
 * **`channel_id`** is id of youtube channel as found in `youtube.com/channel/${channel_od}` (NOT the channel name in `youtube.com/c/${channel_name}`)
-* **`--db`** flag is for name of AWS DynamoDB table which stores timestamp of channel last scape
+* **`DB_NAME`** env var is for name of AWS DynamoDB table which stores timestamp of channel last scape
 * **`--max-concurrent`** flag is for how many videos to download at once (default 4)
 
 ---
@@ -47,10 +47,10 @@ Should we want to access list of all videos we've scraped, we can list the objec
 
 ### Publishing to web
 ```bash
-$ ./upload_pages_to_s3.sh ${bucket} --domain ${domain_name} --sitemap ${sitemap_file_name_on_s3}
+$ ./upload_pages_to_s3.sh --sitemap ${sitemap_file_name_on_s3}
 ```
-* **`bucket`** is name of AWS S3 bucket to upload the generated html files located in `pages` dir to
-* **`--domain`** flag is for the name of the domain to create URLs for in sitemap
+* **`BUCKET_NAME`** env var is name of AWS S3 bucket to upload the generated html files located in `pages` dir to
+* **`DOMAIN_NAME`** env var is for the name of the domain to create URLs for in sitemap
 * **`--sitemap`** flag is for the name of the xml file in S3 which will be appended new page URLs (if the file doesn't exist, new is created from sitemap template)
 
 ---
@@ -76,7 +76,7 @@ $ ./gen_vid_page.sh ${video_id}
 
 ---
 
-We use `youtube-dl` to download video information (`${video_id}.info.json`) and subtitles (`${video_id}.en.vtt`).
+We use `youtube-dl` to download video information (`${video_id}.info.json`) and subtitles (`${video_id}.en.vtt` or any other IETF lang tag instead of `en`).
 
 We read the info and replace placeholders in format `video_${placeholder}_prop` from the `pages/template.html` file.
 

@@ -6,6 +6,8 @@
 export VIDEO_ID_LENGTH=11
 # directory where to write output files from youtube-dl
 export OUTPUT_PATH="tmp"
+# directory where we store generated html pages
+readonly PAGES_DIR_TO_SYNC="pages"
 
 function check_dependency {
     ## Checks that dependency is installed, otherwise exits.

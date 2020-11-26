@@ -64,7 +64,7 @@ eval "$channel_vids_stream" \
     fi
 
     # limit number of running jobs
-    while [ `jobs | wc -l | xargs` -ge $max_concurrent ]
+    while [ `jobs | grep "Running" -c` -ge $max_concurrent ]
     do
         sleep 1
     done

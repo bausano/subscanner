@@ -6,22 +6,30 @@ readonly help='
 Uploads all files in the `pages` directory to an S3 bucket using AWS CLI v2.
 You will need to set up AWS credentials with access to the bucket. See
 the README for more instructions.
-* bucket name id
+* env var BUCKET_NAME
+* env var DOMAIN_NAME used for sitemap links
 * flag `--sitemap` with the name of the sitemap file stored in S3 to append new
     videos to (if the file does not exist we create new one)
-* flag `--domain` with the domain name, used for sitemap links
 
-$ ./upload_pages_to_s3.sh subscanner.com --domain "subscanner.com" --sitemap "sitemap1.xml"
+$ ./upload_pages_to_s3.sh --sitemap "sitemap1.xml"
 '
 if [ "${1}" = "help" ]; then echo "${help}" && exit 0; fi
 
 check_dependency "aws"
 
-readonly PAGES_DIR_TO_SYNC="pages"
+# Imports the .env file environment variables if present.
+if test -f ".env"; then
+    echo "(source .env)"
+    source .env
+fi
 
-readonly bucket_name=$1
-if [ -z "${bucket_name}" ]; then
+if [ -z "${BUCKET_NAME}" ]; then
     echo "Bucket name must be provided. See ./upload_pages_to_s3 help"
+    exit 1
+fi
+
+if [ -z "${DOMAIN_NAME}" ]; then
+    echo "Domain must be provided. See ./upload_pages_to_s3 help"
     exit 1
 fi
 
@@ -29,9 +37,6 @@ for key in "$@"; do
     case ${key} in
         --sitemap)
         readonly sitemap_file=$2
-        ;;
-        --domain)
-        readonly domain=$2
         ;;
     esac
     # go to next flag
@@ -41,17 +46,6 @@ done
 if [ -z "${sitemap_file}" ]; then
     echo "Sitemap file must be provided. See ./upload_pages_to_s3 help"
     exit 1
-fi
-
-if [ -z "${domain}" ]; then
-    echo "Domain must be provided. See ./upload_pages_to_s3 help"
-    exit 1
-fi
-
-# Imports the .env file environment variables if present.
-if test -f ".env"; then
-    echo "(source .env)"
-    source .env
 fi
 
 # reads all gen pages, return only file names (no /pages path)
@@ -65,7 +59,7 @@ if [[ ${#pages} -eq 0 ]]; then
 fi
 
 # copies sitemap file if exists, returns 1 if not
-aws s3 cp "s3://${bucket_name}/${sitemap_file}" "sitemaps"
+aws s3 cp "s3://${BUCKET_NAME}/${sitemap_file}" "sitemaps"
 
 # https://stackoverflow.com/q/4881930/5093093
 # if exists read all but last line, which means closing </urlset> is dropped
@@ -79,7 +73,7 @@ fi
 
 while read html_file_name;
 do
-    sitemap_content_mut+="<url><loc>https://${domain}/${html_file_name}</loc></url>"
+    sitemap_content_mut+="<url><loc>https://${DOMAIN_NAME}/${html_file_name}</loc></url>"
 done <<< "${pages}"
 
 # closes the sitemap as we read `head -n -1`
@@ -90,13 +84,13 @@ echo "[`date`] Uploading sitemap..."
 echo "${sitemap_content_mut}" > "sitemaps/${sitemap_file}"
 aws s3 cp \
     "sitemaps/${sitemap_file}" \
-    "s3://${bucket_name}/${sitemap_file}" \
+    "s3://${BUCKET_NAME}/${sitemap_file}" \
     --acl "public-read"
 abort_on_err $? "Cannot copy sitemap"
 
 # FIXME: maybe I don't need public-read because it's a static website
 echo "[`date`] Uploading all pages..."
-aws s3 sync "${PAGES_DIR_TO_SYNC}" "s3://${bucket_name}" \
+aws s3 sync "${PAGES_DIR_TO_SYNC}" "s3://${BUCKET_NAME}" \
     --acl "public-read" `# everyone can access since it's website` \
     --storage-class "REDUCED_REDUNDANCY" `# cheaper storage` \
     --exclude ".gitignore" --exclude "template.html" `# only html pages` \

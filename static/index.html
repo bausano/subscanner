@@ -6,28 +6,156 @@
     <meta name="description" content="YouTube video transcripts">
     <meta name="keywords" content="youtube,search,transcript">
 
-    <!-- I am really sorry. -->
-    <script data-ad-client="ca-pub-6195384194144705" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
-
     <title>subscanner</title>
 </head>
 <body>
-    <h1>subscanner.com</h1>
-    <p>
-        <em>subscanner</em> let's you reach content which would otherwise be
-        hidden by allowing search engines index YouTube subtitles.
-    </p>
-    <p>
-        See <a href="/sitemap_index.xml">the sitemap</a> for index of videos
-        which can be searched.
-    </p>
-    <p>
-        See <a href="/privacy">the privacy policy</a> for information about the
-        cookies that are stored on your device.
-    </p>
-    <p>
-        Created by <a href="https://porkbrain.com">porkbrain</a> with source code
-        accessible on <a href="https://github.com/bausano/subscanner">GitHub</a>.
-    </p>
+    <header>
+        <h1>subscanner.com</h1>
+        <p>
+            <em>subscanner</em> let's you reach content which would otherwise be
+            hidden by allowing search engines index YouTube subtitles.
+        </p>
+    </header>
+
+    <section>
+        <p>
+            <form id="navigate-to-vid">
+                <label
+                    style="font-size: 75%;"
+                    for="video_id"
+                >Paste video URL to view subtitles:</label>
+                <!-- 43 is len of a yt link, but 42 is nicer. -->
+                <input
+                    size="42"
+                    type="text"
+                    id="video-id"
+                    placeholder="https://youtube.com/watch?v=n3IYmdy6d4Y"
+                >
+                <input type="submit" value="Go">
+            </form>
+
+            <script>
+                var VID_ID_LENGTH = 11;
+
+                document
+                    .getElementById('navigate-to-vid')
+                    .addEventListener("submit", (event) => {
+                        var vid = document.getElementById('video-id').value;
+                        var vidId = vid.includes('?v=')
+                            ? vid.split('?v=')[1]
+                            : vid.length === VID_ID_LENGTH ? vid : undefined;
+
+                        if (vidId) {
+                            window.location.href = `/${vidId}`;
+                        }
+
+                        event.preventDefault();
+                    });
+            </script>
+        </p>
+
+        <p>
+            <form action="https://duckduckgo.com/" method="get">
+                <input type="hidden" name="sites" value="subscanner.com">
+                <label
+                    style="font-size: 75%;"
+                    for="video_id"
+                >Search for text in youtube videos:</label>
+                <input
+                    size="42"
+                    type="text"
+                    name="q"
+                    placeholder="what is a neurotrasmitter"
+                >
+                <input type="submit" value="Search">
+            </form>
+        </p>
+    </section>
+
+    <section>
+        <h2>Featured videos</h2>
+
+        <div style="display: flex; flex-wrap: wrap;">
+            <a href="/rjDX5ItsOnQ">
+                <figure>
+                    <img
+                        width="256"
+                        src="https://i.ytimg.com/vi_webp/rjDX5ItsOnQ/mqdefault.webp"
+                        alt="How Was Video Invented? by Veritasium"
+                    >
+                    <figcaption>
+                        How Was Video Invented<br>
+                        by Veritasium
+                    </figcaption>
+                </figure>
+            </a>
+
+            <a href="/eAdanPfQdCA">
+                <figure>
+                    <img
+                        width="256"
+                        src="https://i.ytimg.com/vi_webp/eAdanPfQdCA/mqdefault.webp"
+                        alt="The Astounding Physics of N95 Masks by minutephysics"
+                    >
+                    <figcaption>
+                        The Astounding Physics<br> of N95 Masks<br>
+                        by minutephysics
+                    </figcaption>
+                </figure>
+            </a>
+
+            <a href="/6uc_huc5G24">
+                <figure>
+                    <img
+                        width="256"
+                        src="https://i.ytimg.com/vi_webp/6uc_huc5G24/mqdefault.webp"
+                        alt="What Owning a Sushi Restaurant in Japan is Like by Abroad in Japan"
+                    >
+                    <figcaption>
+                        Owning Sushi Restaurant<br>
+                        by Abroad in Japan
+                    </figcaption>
+                </figure>
+            </a>
+
+            <a href="/TudhYwBrgYg">
+                <figure>
+                    <img
+                        width="256"
+                        src="https://i.ytimg.com/vi_webp/TudhYwBrgYg/mqdefault.webp"
+                        alt="Pastry Chef Attempts To Make Gourmet Skittles by Bon Appétit"
+                    >
+                    <figcaption>
+                        Pastry Chef Attempts<br> To Make Gourmet Skittles<br>
+                        by Bon Appétit
+                    </figcaption>
+                </figure>
+            </a>
+
+            <a href="/bBC-nXj3Ng4">
+                <figure>
+                    <img
+                        width="256"
+                        src="https://i.ytimg.com/vi_webp/bBC-nXj3Ng4/mqdefault.webp"
+                        alt="But how does bitcoin work? by 3Blue1Brown"
+                    >
+                    <figcaption>
+                        How does bitcoin actually work<br>
+                        by 3Blue1Brown
+                    </figcaption>
+                </figure>
+            </a>
+        </div>
+    </section>
+
+    <footer>
+        <hr>
+        <p>
+            See <a href="/sitemap_index.xml">the sitemap</a> for index of videos
+            which can be searched.
+            Created by <a href="https://porkbrain.com">porkbrain</a> with source code
+            accessible on <a href="https://github.com/bausano/subscanner">GitHub</a>.
+        </p>
+    </footer>
 </body>
 </html>

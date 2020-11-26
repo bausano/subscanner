@@ -41,14 +41,13 @@ function retry_gen_vid {
         echo "Succesfully generated page for ${video_id}."
     else
         failures_mut=$(( $failures_mut + 1 ))
+        rm "${file_name}"
     fi
-
-    rm "${file_name}"
 }
 
 for file_name in $OUTPUT_PATH/*.info.json; do
     # limit number of running jobs
-    while [ `jobs | wc -l | xargs` -ge $max_concurrent ]
+    while [ `jobs | grep "Running" -c` -ge $max_concurrent ]
     do
         sleep 1
     done
