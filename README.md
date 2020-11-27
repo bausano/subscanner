@@ -123,6 +123,13 @@ docker run --detach \
     --name subscanner subscanner:1.0.0
 ```
 
+or
+
+```bash
+docker run --detach --name subscanner subscanner:1.0.0
+docker cp .env subscanner:/usr/bin/subscanner/.env
+```
+
 ## Cheatsheet
 ```bash
 # print line by line video released date and id in format of YYYYMMDD.video_id

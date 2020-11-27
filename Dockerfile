@@ -5,8 +5,8 @@ RUN mkdir -p "${BIN_DIRECTORY}"
 WORKDIR "${BIN_DIRECTORY}"
 
 # copies source dirs and scripts and grants the scripts exec permissions
-COPY src .
-RUN chmod +x src/*.sh
+COPY src src
+RUN find src -type f -iname "*.sh" -exec chmod +x {} \;
 
 RUN apt-get update -y
 # necessary deps for the scripts
@@ -28,10 +28,13 @@ RUN apt-get install -y python3-pip
 RUN pip3 install --upgrade youtube-dl
 RUN ln -s /usr/bin/python3 /usr/local/bin/python
 # https://github.com/ytdl-org/youtube-dl/issues/14807
-RUN apt-get install -y locales
+RUN apt-get install -y locales locales-all
 RUN locale-gen en_US.UTF-8 && \
     echo "en_US.UTF-8 UTF-8" > /etc/locale.gen && \
     locale-gen
+ENV LANG "en_US.UTF-8"
+ENV LANGUAGE "en_US.UTF-8"
+ENV LC_ALL "en_US.UTF-8"
 
 # we need AWS CLI to upload the generated pages
 # https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2-linux.html#cliv2-linux-install
