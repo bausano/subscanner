@@ -45,5 +45,5 @@ RUN rm awscliv2.zip
 # https://github.com/aws/aws-cli/issues/5038
 RUN apt-get install -y less
 
-# doesn't do anything yet
-CMD while true; do sleep 1; done
+# run script which polls sqs
+CMD cd src && ./listen_to_sqs.sh --sitemap "${SITEMAP}"

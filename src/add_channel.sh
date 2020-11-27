@@ -28,7 +28,7 @@ if [ -z "${channel_id}" ]; then
     exit 1
 fi
 
-max_concurrent=4
+max_concurrent=${MAX_CONCURRENT}
 for key in "$@"; do
     case ${key} in
         --max-concurrent)

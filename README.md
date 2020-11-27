@@ -33,6 +33,8 @@ $ chmod +x add_channel.sh \
 ## How it works
 Each script accepts `help` as first argument, in which case it will print its documentation and exit.
 
+You need to `cd src` before you start running the scripts for the moment due to relative paths used for another scripts and directories.
+
 ### Persistence
 ```bash
 $ ./add_channel.sh ${channel_id} [--max-concurrent 4]
@@ -110,10 +112,37 @@ $ ./retry_failed_downloads.sh [--max-concurrent 4]
 
 ---
 
-The youtube-dl info file is stored in a `tmp` directory (within this repo). If for some reason we fail to generate page for a video, the info file is not cleaned up. When adequate, we use the retry script to read all those info files and retry generating page for each video. Then regardless of whether the operation succeeds we remove the info file.
+The script above retries to fetch all videos which have failed so far. Often videos would fail because they don't have any subtitles, but that's not always the case.
+
+Sometimes script fail in places I assumed it wouldn't. In bash the error handling story is extremely annoying.
+
+### Default running mode
+```bash
+$ ./listen_to_sqs.sh --sitemap "sitemap1.xml" \
+    [--max-concurrent 4] \
+    [--upload-after 10] \
+    [--retry-failed-after M]
+```
+* **`SQS_URL`** env var tells us which queue to poll
+* **`--sitemap`** flag is for the name of the xml file in S3 which will be appended new page URLs (if the file doesn't exist, new is created from sitemap template)
+* optional **`--upload-after N`** flag sets after how many downloaded channels should we push generated html to S3. Defaults to 10.
+* optional **`--retry-failed-after M`** flag says how many channels to process
+    before retrying all failed videos. If not provided, retry procedure is not
+    ran.
+* **`--max-concurrent`** flag is for how many videos to download at once (default 4)
+
+---
+
+Polls sqs messages with channel ids. For each message it reads, it starts the procedure for adding channel. Every _N_ messages it uploads all scraped pages to S3. Every _M_ messages it retries downloading failed videos.
+
+Useful if you want to have a script which never exists and keeps listening to more work.
 
 ## Docker
 Build docker image with `$ docker build --tag subscanner:1.0.0 .` (with correct version). You will need to either provide all env vars from `.env.example` file or provide `ENV_FILE_PATH` env var which points to a copy of the example.
+
+It is important to provide sitemap file name which will be used for deployment. If you want to have several docker images running, you must provide different sitemap file name to each to avoid data races.
+
+Default docker CMD launches the container into [default running mode](#default-running-mode).
 
 ```bash
 docker run --detach \
@@ -122,21 +151,33 @@ docker run --detach \
     -e BUCKET_NAME=XXX \
     -e DOMAIN_NAME=XXX \
     -e DB_NAME=XXX \
+    -e SITEMAP=sitemap1.xml
     --name subscanner subscanner:1.0.0
 ```
 
 or
 
 ```bash
-docker run --detach --name subscanner subscanner:1.0.0
-docker cp .env subscanner:/usr/bin/subscanner/.env
+docker run --detach \
+    -v "${PWD}/env":/subscanner/env \
+    -e ENV_FILE_PATH=/subscanner/env/.env \
+    -e SITEMAP=sitemap1.xml \
+    -e MAX_CONCURRENT=2 \
+    --name subscanner subscanner:1.0.0
 ```
 
-## Cheatsheet
+## Concurrency
+Scripts accept `--max-concurrent N` flag or `MAX_CONCURRENT` env var which sets maximum number of videos we download subs for at one given moment. Value of ~4 will get your IP banned by Youtube servers if overused (~1000 videos a day).
+
+Another gotcha caused by using S3 are sitemap data races. If you have processes uploading pages to S3 at once, make sure they all work with different sitemap files! Use `--sitemap FILE NAME` flag to control which sitemap is being updated.
+
+## Cheatsheet and useful links
 ```bash
 # print line by line video released date and id in format of YYYYMMDD.video_id
 youtube-dl --simulate --get-filename -o '%(upload_date)s.%(id)s' ${channel_id}
 ```
+
+Use [socialnewsify.com/get-channel-id-by-username-youtube]([channel-name-to-id]) tool to get channel id from username.
 
 <!-- References -->
 [youtube-dl]: https://github.com/ytdl-org/youtube-dl
@@ -145,3 +186,4 @@ youtube-dl --simulate --get-filename -o '%(upload_date)s.%(id)s' ${channel_id}
 [aws-cli-dynamodb]: https://docs.aws.amazon.com/cli/latest/reference/dynamodb
 [docker-image]: https://hub.docker.com/repository/docker/porkbrain/subscanner/general
 [docker-image-badge]: https://img.shields.io/docker/cloud/build/porkbrain/subscanner.svg
+[channel-name-to-id]: https://socialnewsify.com/get-channel-id-by-username-youtube/
