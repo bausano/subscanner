@@ -1,5 +1,7 @@
 # subscanner
 
+[![Docker build][docker-image-badge]][docker-image]
+
 At the moment of writing the app, there is no way to search YouTube video content as its not indexed by browsers. The solution to this problem is an app which scrapes YouTube subtitles APIs and creates an html file with the transcript. The html files are uploaded to an S3 bucket. The content is indexed by search engines.
 
 We only scrape subs written by humans as auto generated subtitles are of poor quality.
@@ -141,3 +143,5 @@ youtube-dl --simulate --get-filename -o '%(upload_date)s.%(id)s' ${channel_id}
 [aws-cli-install]: https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2-linux.html
 [sitemap]: https://www.sitemaps.org/protocol.html
 [aws-cli-dynamodb]: https://docs.aws.amazon.com/cli/latest/reference/dynamodb
+[docker-image]: https://hub.docker.com/repository/docker/porkbrain/subscanner/general
+[docker-image-badge]: https://img.shields.io/docker/cloud/build/porkbrain/subscanner.svg

@@ -18,6 +18,7 @@
     </header>
 
     <section>
+        <h2>Search subscanner</h2>
         <p>
             <form id="navigate-to-vid">
                 <label
@@ -39,7 +40,7 @@
 
                 document
                     .getElementById('navigate-to-vid')
-                    .addEventListener("submit", (event) => {
+                    .addEventListener('submit', (event) => {
                         var vid = document.getElementById('video-id').value;
                         var vidId = vid.includes('?v=')
                             ? vid.split('?v=')[1]
@@ -146,6 +147,50 @@
                 </figure>
             </a>
         </div>
+    </section>
+
+    <section>
+        <h2>Add channel to subscanner</h2>
+        <p>
+            Do you have a favorite channel which has subtitles that you'd like
+            to be added to <em>subscanner</em>?
+        </p>
+        <p>
+            <form
+                id="post-channel"
+            >
+                <label
+                    style="font-size: 75%;"
+                    for="channel-id"
+                >Paste URL to channel:</label>
+                <input
+                    size="56"
+                    type="text"
+                    name="channel-id"
+                    id="channel-id"
+                    placeholder="https://www.youtube.com/channel/UCRBwLPbXGsI2cJe9W1zfSjQ"
+                >
+                <input type="submit" value="Add to subscanner">
+            </form>
+        </p>
+
+        <script>
+            var api = 'https://3kae36qwl9.execute-api.eu-west-1.amazonaws.com/channels';
+            document
+                .getElementById('post-channel')
+                .addEventListener('submit', (event) => {
+                    var channelInput = document.getElementById('channel-id');
+                    var channelId = channelInput.value;
+
+                    var http = new XMLHttpRequest();
+                    http.open('POST', api, true);
+                    http.setRequestHeader('Content-type', 'application/json');
+                    http.send(JSON.stringify({ "channel_id": channelId }));
+
+                    channelInput.value = '';
+                    event.preventDefault();
+                });
+        </script>
     </section>
 
     <footer>
