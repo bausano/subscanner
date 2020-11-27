@@ -8,8 +8,10 @@ We only scrape subs written by humans as auto generated subtitles are of poor qu
 You must have [`youtube-dl`](youtube-dl) utility installed to fetch the subs and `jq` to query info json file. Then `minify` for html size reduction and `gzip` to serve gzip file to clients. We use `ffmpeg` to convert from `vtt` to `srt` which is much easier to parse.
 
 ```bash
-$ apt-get install -y youtube-dl jq minify gzip ffmpeg
+$ apt-get install -y jq minify gzip ffmpeg
 ```
+
+See the [`Dockerfile`](Dockerfile) for source from which you can download `youtube-dl`.
 
 You must [install AWS CLI][aws-cli-install] and [configure your environment](#publishing-to-web).
 
@@ -107,6 +109,19 @@ $ ./retry_failed_downloads.sh [--max-concurrent 4]
 ---
 
 The youtube-dl info file is stored in a `tmp` directory (within this repo). If for some reason we fail to generate page for a video, the info file is not cleaned up. When adequate, we use the retry script to read all those info files and retry generating page for each video. Then regardless of whether the operation succeeds we remove the info file.
+
+## Docker
+Build docker image with `$ docker build --tag subscanner:1.0.0 .` (with correct version). You will need to either provide all env vars from `.env.example` file or provide `ENV_FILE_PATH` env var which points to a copy of the example.
+
+```bash
+docker run --detach \
+    -e AWS_ACCESS_KEY_ID=XXX \
+    -e AWS_SECRET_ACCESS_KEY=XXX \
+    -e BUCKET_NAME=XXX \
+    -e DOMAIN_NAME=XXX \
+    -e DB_NAME=XXX \
+    --name subscanner subscanner:1.0.0
+```
 
 ## Cheatsheet
 ```bash

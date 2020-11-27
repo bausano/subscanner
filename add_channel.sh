@@ -16,7 +16,7 @@ if [ "${1}" = "help" ]; then echo "${help}" && exit 0; fi
 check_dependency "aws"
 
 # Imports the .env file environment variables if present.
-if test -f ".env"; then
+if test -f "${ENV_FILE_PATH}"; then
     echo "(source .env)"
     source .env
 fi

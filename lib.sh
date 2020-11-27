@@ -7,7 +7,9 @@ export VIDEO_ID_LENGTH=11
 # directory where to write output files from youtube-dl
 export OUTPUT_PATH="tmp"
 # directory where we store generated html pages
-readonly PAGES_DIR_TO_SYNC="pages"
+export PAGES_DIR_TO_SYNC="pages"
+# where to find env file
+export ENV_FILE_PATH="${ENV_FILE_PATH:-".env"}"
 
 function check_dependency {
     ## Checks that dependency is installed, otherwise exits.
@@ -25,8 +27,12 @@ function check_dependency {
     then
         echo "Follow the official guide at"
         echo "https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2-linux.html"
+    elif [ "${dep}" == "youtube-dl" ];
+    then
+        echo "Follow the official guide at"
+        echo "https://github.com/ytdl-org/youtube-dl"
     else
-        echo "\$ sudo apt-get install ${dep}"
+        echo "\$ apt-get install ${dep}"
     fi
 
     exit 1
