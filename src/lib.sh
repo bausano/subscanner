@@ -9,7 +9,7 @@ export OUTPUT_PATH="tmp"
 # directory where we store generated html pages
 export PAGES_DIR_TO_SYNC="pages"
 # where to find env file
-export ENV_FILE_PATH="${ENV_FILE_PATH:-".env"}"
+export ENV_FILE_PATH="${ENV_FILE_PATH:-"../.env"}"
 
 function check_dependency {
     ## Checks that dependency is installed, otherwise exits.

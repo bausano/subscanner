@@ -1,4 +1,18 @@
 static
+.vscode
 .editorconfig
 .env
 .gitignore
+
+# local download artifacts
+**/*.vtt
+**/*.srt
+**/*.info.json
+
+# generated html pages except for template
+src/pages/*
+!src/pages/template.html
+
+# sitemaps except for template
+src/sitemaps/*.xml
+!src/sitemaps/template.xml

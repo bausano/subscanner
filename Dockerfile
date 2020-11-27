@@ -4,22 +4,9 @@ ENV BIN_DIRECTORY /usr/bin/subscanner
 RUN mkdir -p "${BIN_DIRECTORY}"
 WORKDIR "${BIN_DIRECTORY}"
 
-# copies scripts and grants them exec permissions
-COPY add_channel.sh .
-COPY gen_channel_vids_pages.sh .
-COPY gen_vid_page.sh .
-COPY retry_failed_downloads.sh .
-COPY upload_pages_to_s3.sh .
-COPY lib.sh .
-RUN chmod +x add_channel.sh \
-    gen_channel_vids_pages.sh gen_vid_page.sh \
-    retry_failed_downloads.sh upload_pages_to_s3.sh \
-    lib.sh
-
-# creates dir structure the scripts expect and copies over template files
-RUN mkdir tmp pages sitemaps
-COPY sitemaps/template.xml sitemaps/template.xml
-COPY pages/template.html pages/template.html
+# copies source dirs and scripts and grants the scripts exec permissions
+COPY src .
+RUN chmod +x src/*.sh
 
 RUN apt-get update -y
 # necessary deps for the scripts

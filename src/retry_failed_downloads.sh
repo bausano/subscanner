@@ -47,7 +47,7 @@ function retry_gen_vid {
 
 for file_name in $OUTPUT_PATH/*.info.json; do
     # limit number of running jobs
-    while [ `jobs | grep "Running" -c` -ge $max_concurrent ]
+    while [ `jobs | grep "Running" -c` -ge $max_concurrent ];
     do
         sleep 1
     done

@@ -17,8 +17,8 @@ check_dependency "aws"
 
 # Imports the .env file environment variables if present.
 if test -f "${ENV_FILE_PATH}"; then
-    echo "(source .env)"
-    source .env
+    echo "(source ${ENV_FILE_PATH})"
+    source ${ENV_FILE_PATH}
 fi
 
 # youtube.com/channel/${channel_id}
