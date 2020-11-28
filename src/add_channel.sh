@@ -54,18 +54,36 @@ if [ $already_exists -eq 1 ]; then
     exit 1
 fi
 
+function add_channel_to_db {
+    ## Inserts channel id to db.
+
+    local updated_at=$1
+
+    echo "[`date`] Inserting channel to db..."
+    aws dynamodb put-item \
+        --table-name "${DB_NAME}" \
+        --item "{
+            \"channel_id\": {\"S\": \"${channel_id}\"},
+            \"updated_at\": {\"N\": \"${updated_at}\"}
+        }"
+    abort_on_err $? "Cannot store channel in db."
+}
+
 # scrape all vids to date
 echo "[`date`] Scraping channel videos..."
 ./gen_channel_vids_pages.sh "${channel_id}" --max-concurrent "${max_concurrent}"
-abort_on_err $? "Videos for channel ${channel_id} cannot be created."
+res=$?
 
-echo "[`date`] Inserting channel to db..."
-aws dynamodb put-item \
-    --table-name "${DB_NAME}" \
-    --item "{
-        \"channel_id\": {\"S\": \"${channel_id}\"},
-        \"updated_at\": {\"N\": \"$(date +%s)\"}
-      }"
-abort_on_err $? "Cannot store channel in db."
-
-echo "[`date`] Done!"
+if [[ $res == 0 ]]; then
+    add_channel_to_db "$(date +%s)"
+    echo "[`date`] Done!"
+elif [[ ?res == $ERR_TRY_LATER ]]; then
+    echo "Too many requets. Try channel ${channel_id} later."
+    # we add the channel, but set the time to 0, so next time we will query all
+    # channels from scratch
+    add_channel_to_db "0"
+    exit $ERR_TRY_LATER
+else
+    echo "Error downloading channel ${channel_id}."
+    exit 1
+fi

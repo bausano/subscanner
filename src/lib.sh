@@ -11,7 +11,10 @@ export PAGES_DIR_TO_SYNC="pages"
 # where to find env file
 export ENV_FILE_PATH="${ENV_FILE_PATH:-"../.env"}"
 # how many concurrent gen pages can there be
-export MAX_CONCURRENT=${MAX_CONCURRENT:-4}
+export MAX_CONCURRENT=${MAX_CONCURRENT:-1}
+
+# error codes
+export ERR_TRY_LATER=16
 
 function check_dependency {
     ## Checks that dependency is installed, otherwise exits.

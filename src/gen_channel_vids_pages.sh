@@ -57,9 +57,14 @@ fi
 
 # to speed up the process we process video as soon as the id is fetched by
 # youtube-dl instead of waiting for the fetching process to finish
-eval "$channel_vids_stream" \
-| while read -r video_id; do
-    if [[ ! ${#video_id} -eq ${VIDEO_ID_LENGTH} ]]; then
+# we redirect stderr to stdout so that we can catch errors
+eval "$channel_vids_stream" 2>&1 \
+| while read -r line; do
+    if [[ ! ${#line} -eq ${VIDEO_ID_LENGTH} ]]; then
+        if [[ "${line}" =~ "HTTP Error 429" ]]; then
+            echo "Too many requests!"
+            exit $ERR_TRY_LATER
+        fi
         continue
     fi
 
@@ -69,10 +74,11 @@ eval "$channel_vids_stream" \
         sleep 1
     done
 
+    video_id=$line
+
     # in background and prepend stdout with vid id
     ./gen_vid_page.sh "${video_id}" | sed 's/^/['"${video_id}"'] /' &
 done
-abort_on_err $? "Videos for channel ${channel_id} cannot be created."
 
 # await all jobs
 for job in `jobs -p`; do wait ${job}; done

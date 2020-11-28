@@ -41,7 +41,7 @@ $ ./add_channel.sh ${channel_id} [--max-concurrent 4]
 ```
 * **`channel_id`** is id of youtube channel as found in `youtube.com/channel/${channel_od}` (NOT the channel name in `youtube.com/c/${channel_name}`)
 * **`DB_NAME`** env var is for name of AWS DynamoDB table which stores timestamp of channel last scape
-* **`--max-concurrent`** flag is for how many videos to download at once (default 4)
+* **`--max-concurrent`** flag is for how many videos to download at once (default 1)
 
 ---
 
@@ -98,7 +98,7 @@ $ ./gen_channel_vids_pages.sh ${channel_id} \
 ```
 * **`channel_id`** is id of youtube channel as found in `youtube.com/channel/${channel_od}` (NOT the channel name in `youtube.com/c/${channel_name}`)
 * **`--since`** flag is to filter youtube videos which are older than provided date
-* **`--max-concurrent`** flag is for how many videos to download at once (default 4)
+* **`--max-concurrent`** flag is for how many videos to download at once (default 1)
 
 ---
 
@@ -108,7 +108,7 @@ We pull all videos from channel and generate pages for them. This functionality 
 ```bash
 $ ./retry_failed_downloads.sh [--max-concurrent 4]
 ```
-* **`--max-concurrent`** flag is for how many videos to download at once (default 4)
+* **`--max-concurrent`** flag is for how many videos to download at once (default 1)
 
 ---
 
@@ -129,7 +129,7 @@ $ ./listen_to_sqs.sh --sitemap "sitemap1.xml" \
 * optional **`--retry-failed-after M`** flag says how many channels to process
     before retrying all failed videos. If not provided, retry procedure is not
     ran.
-* **`--max-concurrent`** flag is for how many videos to download at once (default 4)
+* **`--max-concurrent`** flag is for how many videos to download at once (default 1)
 
 ---
 
@@ -166,6 +166,34 @@ docker run --detach \
     --name subscanner subscanner:1.0.0
 ```
 
+If you're deploying this app to ec2 instance, following installs docker.
+
+```bash
+sudo yum update -y
+sudo yum install -y docker
+sudo usermod -aG docker ec2-user
+sudo service docker start
+mkdir env # we will use this to store env file
+```
+
+And now we copy `start_sqs_poll.sh` script and `.env` file to the instance.
+
+```bash
+PEM_PATH="/home/user/.ssh/key.pem"
+INSTANCE_NAME="ec2-1-2-3-4.eu-west-1.compute.amazonaws.com"
+# copy run script which pulls image and starts container
+rsync -e "ssh -i ${PEM_PATH}" \
+    deployment/start_sqs_poll.sh \
+    "ec2-user@${INSTANCE_NAME}":/home/ec2-user/start_sqs_poll.sh
+# you need to create the env dir first at the target instance, then you can sync
+# the local .env file
+rsync -e "ssh -i ${PEM_PATH}" \
+    .env \
+    "ec2-user@${INSTANCE_NAME}":/home/ec2-user/env/.env
+```
+
+Now you can ssh into the instance and run the script.
+
 ## Concurrency
 Scripts accept `--max-concurrent N` flag or `MAX_CONCURRENT` env var which sets maximum number of videos we download subs for at one given moment. Value of ~4 will get your IP banned by Youtube servers if overused (~1000 videos a day).
 
@@ -178,6 +206,26 @@ youtube-dl --simulate --get-filename -o '%(upload_date)s.%(id)s' ${channel_id}
 ```
 
 Use [socialnewsify.com/get-channel-id-by-username-youtube]([channel-name-to-id]) tool to get channel id from username.
+
+To avoid getting error 429, one can try to follow:
+
+> Here the steps I followed:
+    \
+    * if you use Firefox, install addon cookies.txt, enable the addon
+    \
+    * clear your browser cache, clear you browser cookies (privacy reasons)
+    \
+    * go to google.com, and log in with your google account
+    \
+    * go to youtube.com
+    \
+    * click on the cookies.txt addon, and export the cookies, save it as cookies.txt (in the same directory from where you are going to run youtube-dl)
+    \
+    * this worked for me ... youtube-dl --cookies cookies.txt https://www.youtube.com/watch?v=....
+    \
+    \
+    https://www.reddit.com/r/youtubedl/comments/ejgy2l/yt_banning_ips_with_http_error_429_too_many/fsymxh7
+
 
 <!-- References -->
 [youtube-dl]: https://github.com/ytdl-org/youtube-dl

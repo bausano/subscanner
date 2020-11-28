@@ -93,12 +93,21 @@ do
     fi
 
     channel_id="${BASH_REMATCH[1]}"
+    echo "Sleeping for 1 minute before adding a channel to avoid getting banned by youtube"
+    sleep 60
     echo "Adding channel ${channel_id}..."
     ./add_channel.sh "${channel_id}" --max-concurrent "${max_concurrent}"
+    res=$?
 
-    if [[ $? != 0 ]]; then
+    if [[ $res == $ERR_TRY_LATER ]]; then
+        echo "This IP got banned :("
+        ./upload_pages_to_s3.sh --sitemap "${sitemap_file}"
+        # kill the script if we got banned by yt
+        exit $ERR_TRY_LATER
+    elif [[ $res != 0  ]]; then
         continue
     fi
+
     downloaded_count=$(( $downloaded_count + 1 ))
 
     # if it's time to upload pages, push to s3
