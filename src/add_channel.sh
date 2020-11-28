@@ -6,10 +6,8 @@ readonly help='
 Generates pages for all channel vids and adds channel to db.
 * env var DB_NAME
 * channel id as given by yt (/channel/${channel_id} and not /c/${channel_name})
-* optinal `--max-concurrent integer` flag which limits how many videos are
-    processed at once
 
-$ ./add_channel.sh ${channel_id} [--max-concurrent 4]
+$ ./add_channel.sh ${channel_id}
 '
 if [ "${1}" = "help" ]; then echo "${help}" && exit 0; fi
 
@@ -27,17 +25,6 @@ if [ -z "${channel_id}" ]; then
     echo "Channel id must be provided. See ./add_channel help"
     exit 1
 fi
-
-max_concurrent=${MAX_CONCURRENT}
-for key in "$@"; do
-    case ${key} in
-        --max-concurrent)
-        max_concurrent=$2
-        ;;
-    esac
-    # go to next flag
-    shift
-done
 
 if [ -z "${DB_NAME}" ]; then
     echo "DynamoDB name env var must be provided. See ./add_channel help"
@@ -71,19 +58,15 @@ function add_channel_to_db {
 
 # scrape all vids to date
 echo "[`date`] Scraping channel videos..."
-./gen_channel_vids_pages.sh "${channel_id}" --max-concurrent "${max_concurrent}"
-res=$?
+res=$(./gen_channel_vids_pages.sh "${channel_id}")
 
-if [[ $res == 0 ]]; then
-    add_channel_to_db "$(date +%s)"
-    echo "[`date`] Done!"
-elif [[ ?res == $ERR_TRY_LATER ]]; then
-    echo "Too many requets. Try channel ${channel_id} later."
+if [[ "${res}" =~ "${HTTP_429}" ]]; then
+    echo "${HTTP_429}. Try channel ${channel_id} later."
     # we add the channel, but set the time to 0, so next time we will query all
     # channels from scratch
     add_channel_to_db "0"
     exit $ERR_TRY_LATER
 else
-    echo "Error downloading channel ${channel_id}."
-    exit 1
+    add_channel_to_db "$(date +%s)"
+    echo "[`date`] Done!"
 fi

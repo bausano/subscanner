@@ -6,20 +6,9 @@ readonly help='
 Reads all info json files in the tmp dir and retries download for each
 video id. Then removes the json file regardless if the retry failed or not.
 
-$ ./retry_failed_downloads.sh [--max-concurrent 4]
+$ ./retry_failed_downloads.sh
 '
 if [ "${1}" = "help" ]; then echo "${help}" && exit 0; fi
-
-max_concurrent=4
-for key in "$@"; do
-    case ${key} in
-        --max-concurrent)
-        max_concurrent=$2
-        ;;
-    esac
-    # go to next flag
-    shift
-done
 
 # counters for info printing
 successes_mut=0
@@ -46,14 +35,7 @@ function retry_gen_vid {
 }
 
 for file_name in $OUTPUT_PATH/*.info.json; do
-    # limit number of running jobs
-    while [ `jobs | grep "Running" -c` -ge $max_concurrent ];
-    do
-        sleep 1
-    done
-
-    # runs gen function in background
-    retry_gen_vid "${video_id}" &
+    retry_gen_vid "${video_id}"
 done
 
 echo "${successes_mut} retries succeeded and ${failures_mut} retries failed."

@@ -7,15 +7,12 @@ Lists youtube video ids from given channel. Then it call `gen_vid_page.sh`
 for each video.
 * channel id as given by yt (/channel/${channel_id} and not /c/${channel_name})
 * optinal `--since {yyyy-mm-dd}` flag
-* optinal `--max-concurrent integer` flag which limits how many videos are
-    processed at once
 
 Adds channel into db and generates pages, but you need to publish those pages
 with `upload_pages_to_s3.sh`.
 
 $ ./gen_channel_vids_pages.sh ${channel_id} \
     [--since "yyyy-mm-dd"] \
-    [--max-concurrent 4]
 '
 if [ "${1}" = "help" ]; then echo "${help}" && exit 0; fi
 
@@ -30,14 +27,10 @@ fi
 
 readonly channel_url="https://www.youtube.com/channel/${channel_id}"
 
-max_concurrent=4
 for key in "$@"; do
     case ${key} in
         --since)
         since=$2
-        ;;
-        --max-concurrent)
-        max_concurrent=$2
         ;;
     esac
     # go to next flag
@@ -61,26 +54,18 @@ fi
 eval "$channel_vids_stream" 2>&1 \
 | while read -r line; do
     if [[ ! ${#line} -eq ${VIDEO_ID_LENGTH} ]]; then
-        if [[ "${line}" =~ "HTTP Error 429" ]]; then
-            echo "Too many requests!"
+        if [[ "${line}" =~ "${HTTP_429}" ]]; then
+            echo "${HTTP_429}"
             exit $ERR_TRY_LATER
         fi
         continue
     fi
 
-    # limit number of running jobs
-    while [ `jobs | grep "Running" -c` -ge $max_concurrent ];
-    do
-        sleep 1
-    done
-
     video_id=$line
 
-    # in background and prepend stdout with vid id
-    ./gen_vid_page.sh "${video_id}" | sed 's/^/['"${video_id}"'] /' &
+    ./gen_vid_page.sh "${video_id}" | sed 's/^/['"${video_id}"'] /'
+    echo "Sleeping for 10s after vid download."
+    sleep 10
 done
-
-# await all jobs
-for job in `jobs -p`; do wait ${job}; done
 
 echo "[`date`] Done!"

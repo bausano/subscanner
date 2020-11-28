@@ -37,11 +37,10 @@ You need to `cd src` before you start running the scripts for the moment due to 
 
 ### Persistence
 ```bash
-$ ./add_channel.sh ${channel_id} [--max-concurrent 4]
+$ ./add_channel.sh ${channel_id}
 ```
 * **`channel_id`** is id of youtube channel as found in `youtube.com/channel/${channel_od}` (NOT the channel name in `youtube.com/c/${channel_name}`)
 * **`DB_NAME`** env var is for name of AWS DynamoDB table which stores timestamp of channel last scape
-* **`--max-concurrent`** flag is for how many videos to download at once (default 1)
 
 ---
 
@@ -92,13 +91,10 @@ We write the output to an html file `${video_id}.html` after minimizing it (~ 50
 
 ### Pulling channel videos
 ```bash
-$ ./gen_channel_vids_pages.sh ${channel_id} \
-    [--since ${yyyy-mm-dd}] \
-    [--max-concurrent 4]
+$ ./gen_channel_vids_pages.sh ${channel_id} [--since ${yyyy-mm-dd}]
 ```
 * **`channel_id`** is id of youtube channel as found in `youtube.com/channel/${channel_od}` (NOT the channel name in `youtube.com/c/${channel_name}`)
 * **`--since`** flag is to filter youtube videos which are older than provided date
-* **`--max-concurrent`** flag is for how many videos to download at once (default 1)
 
 ---
 
@@ -106,9 +102,8 @@ We pull all videos from channel and generate pages for them. This functionality 
 
 ### Fault tolerance
 ```bash
-$ ./retry_failed_downloads.sh [--max-concurrent 4]
+$ ./retry_failed_downloads.sh
 ```
-* **`--max-concurrent`** flag is for how many videos to download at once (default 1)
 
 ---
 
@@ -119,7 +114,6 @@ Sometimes script fail in places I assumed it wouldn't. In bash the error handlin
 ### Default running mode
 ```bash
 $ ./listen_to_sqs.sh --sitemap "sitemap1.xml" \
-    [--max-concurrent 4] \
     [--upload-after 10] \
     [--retry-failed-after M]
 ```
@@ -129,7 +123,6 @@ $ ./listen_to_sqs.sh --sitemap "sitemap1.xml" \
 * optional **`--retry-failed-after M`** flag says how many channels to process
     before retrying all failed videos. If not provided, retry procedure is not
     ran.
-* **`--max-concurrent`** flag is for how many videos to download at once (default 1)
 
 ---
 
@@ -162,7 +155,6 @@ docker run --detach \
     -v "${PWD}/env":/subscanner/env \
     -e ENV_FILE_PATH=/subscanner/env/.env \
     -e SITEMAP=sitemap1.xml \
-    -e MAX_CONCURRENT=2 \
     --name subscanner subscanner
 ```
 
@@ -195,7 +187,7 @@ rsync -e "ssh -i ${PEM_PATH}" \
 Now you can ssh into the instance and run the script.
 
 ## Concurrency
-Scripts accept `--max-concurrent N` flag or `MAX_CONCURRENT` env var which sets maximum number of videos we download subs for at one given moment. Value of ~4 will get your IP banned by Youtube servers if overused (~1000 videos a day).
+Scripts used to accept `--max-concurrent N` flag, however since it's so easy to get banned by youtube, concurrency doesn't really make sense. We need to add pauses between every downloaded video.
 
 Another gotcha caused by using S3 are sitemap data races. If you have processes uploading pages to S3 at once, make sure they all work with different sitemap files! Use `--sitemap FILE NAME` flag to control which sitemap is being updated.
 

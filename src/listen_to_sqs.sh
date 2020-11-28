@@ -14,11 +14,8 @@ S3. Every M messages it retries downloading failed videos.
 * option `--retry-failed-after M` flag which says how many channels to process
     before retrying all failed videos. If not provided, retry procedure is not
     ran.
-* optinal `--max-concurrent integer` flag which limits how many videos are
-    processed at once
 
 $ ./listen_to_sqs.sh --sitemap "sitemap1.xml" \
-    [--max-concurrent 4] \
     [--upload-after 10] \
     [--retry-failed-after M]
 '
@@ -32,13 +29,9 @@ if test -f "${ENV_FILE_PATH}"; then
     source ${ENV_FILE_PATH}
 fi
 
-max_concurrent=${MAX_CONCURRENT}
 upload_after=10
 for key in "$@"; do
     case ${key} in
-        --max-concurrent)
-        max_concurrent=$2
-        ;;
         --upload-after)
         upload_after=$2
         ;;
@@ -93,10 +86,10 @@ do
     fi
 
     channel_id="${BASH_REMATCH[1]}"
-    echo "Sleeping for 1 minute before adding a channel to avoid getting banned by youtube"
+    echo "Sleeping for 1m to avoid getting banned by youtube."
     sleep 60
     echo "Adding channel ${channel_id}..."
-    ./add_channel.sh "${channel_id}" --max-concurrent "${max_concurrent}"
+    ./add_channel.sh "${channel_id}"
     res=$?
 
     if [[ $res == $ERR_TRY_LATER ]]; then

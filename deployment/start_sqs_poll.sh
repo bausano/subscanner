@@ -2,19 +2,29 @@
 
 ## Pulls subscanner docker image and runs it.
 
-# IMPORTANT! change if using multiple machines (sitemapN.xml)
-sitemap=${SITEMAP:-"sitemap1.xml"}
+readonly host_env_dir="${PWD}/env"
+if [ ! -f "${host_env_dir}/.env" ]; then
+    echo "No env file found at '${host_env_dir}/.env'."
+    exit 1
+else
+    source "${host_env_dir}/.env"
+fi
 
-image_name="porkbrain/subscanner:latest"
-cont_name="subscanner"
+if [ -z "${SITEMAP}" ]; then
+    echo "SITEMAP env var must be provided."
+    exit 1
+fi
 
-echo "Pulling image ${image_name}..."
-docker pull "${image_name}"
+readonly IMG_NAME="porkbrain/subscanner:latest"
+readonly CONT_NAME="subscanner"
 
-echo "Running image ${image_name}..."
+echo "Pulling image ${IMG_NAME}..."
+docker pull "${IMG_NAME}"
+
+echo "Running image ${IMG_NAME}..."
 docker run --detach \
-    -v "${PWD}/env":/subscanner/env \
+    -v "${host_env_dir}":/subscanner/env \
     -e ENV_FILE_PATH=/subscanner/env/.env \
-    -e SITEMAP="${sitemap}" \
-    --name "${cont_name}" \
-    "${image_name}"
+    -e SITEMAP="${SITEMAP}" \
+    --name "${CONT_NAME}" \
+    "${IMG_NAME}"
