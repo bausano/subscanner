@@ -4,4 +4,10 @@
    <sitemap>
       <loc>https://subscanner.com/sitemap1.xml</loc>
    </sitemap>
+   <sitemap>
+      <loc>https://subscanner.com/sitemap2.xml</loc>
+   </sitemap>
+   <sitemap>
+      <loc>https://subscanner.com/sitemap3.xml</loc>
+   </sitemap>
 </sitemapindex>

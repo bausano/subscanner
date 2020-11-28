@@ -138,7 +138,7 @@ Polls sqs messages with channel ids. For each message it reads, it starts the pr
 Useful if you want to have a script which never exists and keeps listening to more work.
 
 ## Docker
-Build docker image with `$ docker build --tag subscanner:1.0.0 .` (with correct version). You will need to either provide all env vars from `.env.example` file or provide `ENV_FILE_PATH` env var which points to a copy of the example.
+Build docker image with `$ docker build --tag subscanner .` (with correct version). You will need to either provide all env vars from `.env.example` file or provide `ENV_FILE_PATH` env var which points to a copy of the example.
 
 It is important to provide sitemap file name which will be used for deployment. If you want to have several docker images running, you must provide different sitemap file name to each to avoid data races.
 
@@ -152,7 +152,7 @@ docker run --detach \
     -e DOMAIN_NAME=XXX \
     -e DB_NAME=XXX \
     -e SITEMAP=sitemap1.xml
-    --name subscanner subscanner:1.0.0
+    --name subscanner subscanner
 ```
 
 or
@@ -163,7 +163,7 @@ docker run --detach \
     -e ENV_FILE_PATH=/subscanner/env/.env \
     -e SITEMAP=sitemap1.xml \
     -e MAX_CONCURRENT=2 \
-    --name subscanner subscanner:1.0.0
+    --name subscanner subscanner
 ```
 
 If you're deploying this app to ec2 instance, following installs docker.
