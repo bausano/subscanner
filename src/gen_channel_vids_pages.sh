@@ -63,7 +63,7 @@ eval "$channel_vids_stream" 2>&1 \
 
     video_id=$line
 
-    ./gen_vid_page.sh "${video_id}" | sed 's/^/['"${video_id}"'] /'
+    ./gen_vid_page.sh "${video_id}"
     echo "Sleeping for 10s after vid download."
     sleep 10
 done

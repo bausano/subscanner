@@ -96,7 +96,7 @@ do
         echo "This IP got banned :("
         ./upload_pages_to_s3.sh --sitemap "${sitemap_file}"
         # kill the script if we got banned by yt
-        exit $ERR_TRY_LATER
+        break
     elif [[ $res != 0  ]]; then
         continue
     fi
@@ -115,3 +115,5 @@ do
         ./retry_failed_downloads.sh
     fi
 done
+
+./upload_pages_to_s3.sh --sitemap "${sitemap_file}"
